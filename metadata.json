@@ -1,8 +1,5 @@
 {
   "name": "AffiliSpeed",
   "description": "A high-performance, ultra-fast social media platform optimized for affiliate marketing with AI-powered caption generation.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
+  "requestFramePermissions": []
 }
