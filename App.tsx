@@ -678,6 +678,12 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
       }
     };
 
+    const handleSendHeart = () => {
+      if (userId) {
+        onSend('❤️', userId);
+      }
+    };
+
     const startCall = async (type: 'audio' | 'video') => {
       setCallType(type);
       setIsCalling(true);
@@ -908,8 +914,12 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
                  </button>
               ) : (
                   <div className="flex space-x-3 text-gray-500 dark:text-gray-400 ml-2">
-                     <button><Camera className="w-5 h-5" /></button>
-                     <button><Heart className="w-5 h-5" /></button>
+                     <button onClick={() => fileInputRef.current?.click()} className="hover:text-brand-600 transition-colors">
+                       <Camera className="w-5 h-5" />
+                     </button>
+                     <button onClick={handleSendHeart} className="hover:text-red-500 transition-colors">
+                       <Heart className="w-5 h-5" />
+                     </button>
                   </div>
               )}
             </div>
