@@ -55,6 +55,7 @@ export interface Message {
   timestamp: number;
   isRead: boolean;
   isEdited?: boolean;
+  liked?: boolean; // New field for double-tap reaction
 }
 
 export type Theme = 'light' | 'dark';

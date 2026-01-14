@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video } from 'lucide-react';
 import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS, INITIAL_MESSAGES } from './constants';
 import { Post, User as UserType, Story, Comment, Message } from './types';
 import PostCard from './components/PostCard';
 import StoryTray from './components/StoryTray';
 import { generateSmartCaption } from './services/geminiService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // -- Icons & UI Components --
 
@@ -477,9 +478,10 @@ const NetworkList = ({
   )
 }
 
-// 7. Inbox (Message List)
+// 7. Inbox (Message List) - Instagram Style
 const Inbox = ({ messages, users, currentUser }: { messages: Message[], users: UserType[], currentUser: UserType }) => {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Group messages by conversation partner
   const conversations = users.map(user => {
@@ -501,67 +503,88 @@ const Inbox = ({ messages, users, currentUser }: { messages: Message[], users: U
     };
   }).filter(c => c.lastMessage); // Only show conversations with messages
 
-  // Also include users you follow but haven't messaged yet? (Optional, skipping for now to keep clean)
+  const filteredConversations = conversations.filter(c => 
+    c.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.user.handle.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="max-w-xl mx-auto bg-white dark:bg-gray-900 min-h-screen pb-20">
-      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
-        <div className="flex items-center">
-            <button onClick={() => navigate('/')} className="mr-3 text-gray-900 dark:text-white">
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <h1 className="font-bold text-lg dark:text-white">Messages</h1>
+    <div className="max-w-xl mx-auto bg-white dark:bg-black min-h-screen pb-20">
+      <div className="flex items-center justify-between px-4 py-3 sticky top-0 bg-white dark:bg-black z-10">
+        <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+            <ChevronLeft className="w-7 h-7 text-gray-900 dark:text-white -ml-2 mr-1" />
+            <h1 className="font-bold text-xl dark:text-white">{currentUser.handle}</h1>
         </div>
-        <button className="text-brand-600 dark:text-brand-400">
-            <Edit2 className="w-5 h-5" />
+        <button className="text-gray-900 dark:text-white">
+            <Edit2 className="w-6 h-6" />
         </button>
       </div>
 
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">
-        {conversations.length === 0 ? (
+      <div className="px-4 mb-4">
+        <div className="bg-gray-100 dark:bg-gray-900 rounded-xl flex items-center px-3 py-2">
+           <Search className="w-4 h-4 text-gray-500" />
+           <input 
+             type="text"
+             placeholder="Search"
+             className="bg-transparent border-none outline-none text-sm ml-2 w-full text-gray-900 dark:text-white placeholder-gray-500"
+             value={searchTerm}
+             onChange={e => setSearchTerm(e.target.value)}
+           />
+        </div>
+      </div>
+
+      <div className="flex flex-col">
+        <h2 className="px-4 text-sm font-semibold text-gray-900 dark:text-white mb-2">Messages</h2>
+        {filteredConversations.length === 0 ? (
           <div className="p-10 text-center text-gray-500">
             <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
             <p>No messages yet.</p>
             <p className="text-sm">Start a conversation with someone!</p>
           </div>
         ) : (
-          conversations.map(convo => (
-            <Link 
-              to={`/messages/${convo.user.id}`} 
-              key={convo.user.id}
-              className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-            >
-              <div className="relative mr-3">
-                 <img src={convo.user.avatar} className="w-14 h-14 rounded-full object-cover" />
-                 {convo.unreadCount > 0 && (
-                   <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900">
-                     {convo.unreadCount}
+          filteredConversations.map(convo => {
+            const isRead = convo.unreadCount === 0;
+            return (
+              <Link 
+                to={`/messages/${convo.user.id}`} 
+                key={convo.user.id}
+                className="flex items-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors active:bg-gray-100 dark:active:bg-gray-800"
+              >
+                <div className="relative mr-3">
+                   <img src={convo.user.avatar} className="w-14 h-14 rounded-full object-cover" />
+                   {/* Online Indicator */}
+                   <div className="absolute bottom-0 right-0 bg-green-500 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-black"></div>
+                </div>
+                <div className="flex-1 min-w-0">
+                   <div className="flex justify-between items-center mb-0.5">
+                     <h3 className={`text-sm truncate pr-2 ${!isRead ? 'font-bold text-gray-900 dark:text-white' : 'font-normal text-gray-900 dark:text-white'}`}>
+                       {convo.user.name}
+                     </h3>
                    </div>
-                 )}
-              </div>
-              <div className="flex-1 min-w-0">
-                 <div className="flex justify-between items-baseline mb-1">
-                   <h3 className="font-semibold text-gray-900 dark:text-white truncate pr-2">
-                     {convo.user.name}
-                   </h3>
-                   <span className="text-xs text-gray-500 flex-shrink-0">
-                     {new Date(convo.lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                   </span>
-                 </div>
-                 <p className={`text-sm truncate ${convo.unreadCount > 0 ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                   {convo.lastMessage.senderId === currentUser.id ? 'You: ' : ''}{convo.lastMessage.text}
-                 </p>
-              </div>
-            </Link>
-          ))
+                   <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                     <p className={`truncate max-w-[180px] ${!isRead ? 'font-bold text-gray-900 dark:text-white' : ''}`}>
+                       {convo.lastMessage.senderId === currentUser.id ? 'You: ' : ''}{convo.lastMessage.text}
+                     </p>
+                     <span className="mx-1">·</span>
+                     <span className="flex-shrink-0 text-xs">
+                       {new Date(convo.lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                     </span>
+                   </div>
+                </div>
+                {convo.unreadCount > 0 && (
+                  <div className="ml-2 bg-blue-500 w-2.5 h-2.5 rounded-full"></div>
+                )}
+              </Link>
+            )
+          })
         )}
       </div>
     </div>
   );
 };
 
-// 8. Chat Room (Individual Conversation)
-const ChatRoom = ({ messages, users, currentUser, onSend, onEdit }: { messages: Message[], users: UserType[], currentUser: UserType, onSend: (text: string, receiverId: string) => void, onEdit: (id: string, text: string) => void }) => {
+// 8. Chat Room (Instagram Style)
+const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }: { messages: Message[], users: UserType[], currentUser: UserType, onSend: (text: string, receiverId: string) => void, onEdit: (id: string, text: string) => void, onToggleLike: (id: string) => void }) => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [text, setText] = useState('');
@@ -590,76 +613,126 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit }: { messages: 
     }
   };
 
+  const handleDoubleTap = (msgId: string) => {
+     onToggleLike(msgId);
+  };
+
   if (!partner) return <div>User not found</div>;
 
   return (
-    <div className="max-w-xl mx-auto bg-white dark:bg-gray-900 h-screen flex flex-col">
+    <div className="max-w-xl mx-auto bg-white dark:bg-black h-screen flex flex-col">
        {/* Header */}
-       <div className="flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-10">
-          <button onClick={() => navigate('/messages')} className="mr-3 text-gray-900 dark:text-white">
-            <ChevronLeft className="w-6 h-6" />
+       <div className="flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-black z-10">
+          <button onClick={() => navigate('/messages')} className="mr-4 text-gray-900 dark:text-white">
+            <ChevronLeft className="w-7 h-7" />
           </button>
-          <div className="flex items-center space-x-3 flex-1">
-             <img src={partner.avatar} className="w-10 h-10 rounded-full object-cover" />
-             <div>
-                <h2 className="font-bold text-sm dark:text-white">{partner.name}</h2>
-                <p className="text-xs text-gray-500">Active now</p>
+          <div className="flex items-center space-x-3 flex-1 cursor-pointer" onClick={() => navigate(`/profile/${partner.id}`)}>
+             <div className="relative">
+                <img src={partner.avatar} className="w-8 h-8 rounded-full object-cover" />
+                <div className="absolute bottom-0 right-0 bg-green-500 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-black"></div>
              </div>
+             <div className="flex flex-col">
+                <h2 className="font-bold text-sm dark:text-white leading-none mb-0.5">{partner.name}</h2>
+                <p className="text-[10px] text-gray-500">Active now</p>
+             </div>
+          </div>
+          <div className="flex space-x-4 text-gray-900 dark:text-white">
+             <Phone className="w-6 h-6" />
+             <Video className="w-7 h-7" />
           </div>
        </div>
 
        {/* Messages Area */}
-       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-black" ref={scrollRef}>
-          {chatMessages.map(msg => {
+       <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white dark:bg-black" ref={scrollRef}>
+          <div className="flex flex-col items-center py-6">
+             <img src={partner.avatar} className="w-20 h-20 rounded-full object-cover mb-3" />
+             <h3 className="text-lg font-bold dark:text-white">{partner.name}</h3>
+             <p className="text-sm text-gray-500">Instagram-style messaging on AffiliSpeed</p>
+             <button className="mt-4 px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-lg text-sm font-semibold dark:text-white">View Profile</button>
+          </div>
+
+          <div className="text-center text-xs text-gray-400 my-4">TODAY</div>
+
+          {chatMessages.map((msg, idx) => {
             const isMe = msg.senderId === currentUser.id;
+            const prevMsg = chatMessages[idx - 1];
+            const isSequence = prevMsg && prevMsg.senderId === msg.senderId;
+            
             return (
-              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
-                 <div className={`relative max-w-[75%] px-4 py-2.5 rounded-2xl ${
+              <div 
+                key={msg.id} 
+                className={`flex ${isMe ? 'justify-end' : 'justify-start'} group relative mb-1`}
+                onDoubleClick={() => handleDoubleTap(msg.id)}
+              >
+                 {!isMe && !isSequence && (
+                   <img src={partner.avatar} className="w-7 h-7 rounded-full object-cover mr-2 self-end mb-1" />
+                 )}
+                 {!isMe && isSequence && <div className="w-9 mr-0"></div>}
+
+                 <div className={`relative max-w-[70%] px-4 py-2.5 text-[15px] leading-snug rounded-[20px] transition-transform active:scale-[0.98] ${
                    isMe 
-                     ? 'bg-brand-600 text-white rounded-br-none' 
-                     : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-none shadow-sm'
+                     ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-br-md ml-auto' 
+                     : 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white rounded-bl-md'
                  }`}>
-                    <p className="text-sm">
-                      {msg.text}
-                      {msg.isEdited && <span className="opacity-60 text-[10px] ml-1">(edited)</span>}
-                    </p>
-                    {isMe && (
-                      <button 
-                        onClick={() => setEditingMessage(msg)}
-                        className="absolute -left-8 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-brand-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Edit Message"
-                      >
-                         <Edit2 className="w-4 h-4" />
-                      </button>
+                    <p>{msg.text}</p>
+                    
+                    {/* Edited Indicator */}
+                    {msg.isEdited && <span className="opacity-60 text-[10px] block text-right mt-1 font-medium italic">edited</span>}
+
+                    {/* Reaction Heart */}
+                    {msg.liked && (
+                      <div className={`absolute -bottom-2 ${isMe ? '-left-2' : '-right-2'} bg-white dark:bg-black rounded-full p-0.5 shadow-sm border border-gray-100 dark:border-gray-800`}>
+                         <div className="bg-red-500 rounded-full p-1">
+                            <Heart className="w-3 h-3 text-white fill-white" />
+                         </div>
+                      </div>
                     )}
                  </div>
+
+                 {/* Edit Button (Only visible on hover/active for own messages) */}
+                 {isMe && (
+                   <button 
+                     onClick={() => setEditingMessage(msg)}
+                     className="self-center ml-2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                   >
+                      <Edit2 className="w-4 h-4" />
+                   </button>
+                 )}
               </div>
             );
           })}
-          {chatMessages.length === 0 && (
-             <div className="text-center text-gray-400 text-sm mt-10">
-               Say hi to {partner.name}! 👋
-             </div>
-          )}
+          
+          <div className="flex justify-end mt-1">
+             <span className="text-[10px] font-semibold text-gray-400 mr-2">Seen</span>
+          </div>
        </div>
 
        {/* Input Area */}
-       <form onSubmit={handleSend} className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center space-x-2 pb-safe-area">
-          <input 
-            type="text" 
-            placeholder="Message..." 
-            className="flex-1 bg-gray-100 dark:bg-gray-800 border-none rounded-full py-2.5 px-4 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
-            value={text}
-            onChange={e => setText(e.target.value)}
-          />
-          <button 
-            type="submit" 
-            disabled={!text.trim()}
-            className="p-2.5 bg-brand-600 text-white rounded-full hover:bg-brand-700 disabled:opacity-50 transition-colors shadow-lg shadow-brand-500/30"
-          >
-             <Send className="w-5 h-5 ml-0.5" />
-          </button>
-       </form>
+       <div className="p-3 bg-white dark:bg-black flex items-center space-x-3 pb-safe-area">
+          <div className="bg-gray-100 dark:bg-gray-900 rounded-full flex items-center flex-1 px-4 py-2 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-700 transition-colors">
+            <input 
+                type="text" 
+                placeholder="Message..." 
+                className="flex-1 bg-transparent border-none text-sm text-gray-900 dark:text-white focus:outline-none placeholder-gray-500"
+                value={text}
+                onChange={e => setText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSend(e)}
+            />
+            {text.trim() ? (
+               <button 
+                 onClick={handleSend}
+                 className="text-blue-500 font-semibold text-sm ml-2 hover:text-blue-600"
+               >
+                 Send
+               </button>
+            ) : (
+                <div className="flex space-x-3 text-gray-500 dark:text-gray-400 ml-2">
+                   <button><Camera className="w-5 h-5" /></button>
+                   <button><Heart className="w-5 h-5" /></button>
+                </div>
+            )}
+          </div>
+       </div>
 
        {/* Edit Message Modal */}
        {editingMessage && (
@@ -1362,6 +1435,11 @@ const App = () => {
     setMessages(prev => prev.map(m => m.id === id ? { ...m, text: newText, isEdited: true } : m));
   };
 
+  // Like Message Logic (Double Tap)
+  const handleToggleLikeMessage = (id: string) => {
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, liked: !m.liked } : m));
+  };
+
   return (
     <Router>
       <Layout theme={theme} toggleTheme={toggleTheme} isAuthenticated={isAuthenticated} onLogout={handleLogout}>
@@ -1438,7 +1516,19 @@ const App = () => {
           />
           {/* Messaging Routes */}
           <Route path="/messages" element={<Inbox messages={messages} users={MOCK_USERS} currentUser={currentUser} />} />
-          <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={MOCK_USERS} currentUser={currentUser} onSend={handleSendMessage} onEdit={handleEditMessage} />} />
+          <Route 
+            path="/messages/:userId" 
+            element={
+              <ChatRoom 
+                 messages={messages} 
+                 users={MOCK_USERS} 
+                 currentUser={currentUser} 
+                 onSend={handleSendMessage} 
+                 onEdit={handleEditMessage} 
+                 onToggleLike={handleToggleLikeMessage}
+              />
+            } 
+          />
           
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/signup" element={<Signup onSignup={handleSignup} />} />
