@@ -1,11 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Ensure the API key is available
-const apiKey = process.env.API_KEY || '';
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateSmartCaption = async (imageFile: File, productName?: string): Promise<string> => {
-  if (!ai) {
+  if (!process.env.API_KEY) {
     console.warn("Gemini API Key is missing.");
     return "Amazing product! Check it out. #deal";
   }

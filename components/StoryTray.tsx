@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Story, User } from '../types';
-import { Plus, X, MoreHorizontal, Trash2, Edit2, Check, ShoppingBag, ExternalLink, Briefcase } from 'lucide-react';
+import { Plus, X, MoreHorizontal, Trash2, Edit2, ShoppingBag, ExternalLink, Heart, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface StoryTrayProps {
@@ -9,9 +9,10 @@ interface StoryTrayProps {
   onAddStory: (file: File, caption: string, link?: string, label?: string) => void;
   onDeleteStory: (id: string) => void;
   onEditStory: (id: string, caption: string) => void;
+  onReplyToStory?: (storyId: string, text: string) => void;
 }
 
-const StoryTray: React.FC<StoryTrayProps> = ({ stories, currentUser, onAddStory, onDeleteStory, onEditStory }) => {
+const StoryTray: React.FC<StoryTrayProps> = ({ stories, currentUser, onAddStory, onDeleteStory, onEditStory, onReplyToStory }) => {
   const [viewingIndex, setViewingIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -20,451 +21,359 @@ const StoryTray: React.FC<StoryTrayProps> = ({ stories, currentUser, onAddStory,
   // Interaction states
   const [isPaused, setIsPaused] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editCaptionText, setEditCaptionText] = useState("");
+  const [replyText, setReplyText] = useState("");
 
   // Upload States
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
-  const [newStoryCaption, setNewStoryCaption] = useState("Just added this! ✨");
-  const [newStoryLink, setNewStoryLink] = useState("");
-  const [newStoryLabel, setNewStoryLabel] = useState("Get Offer");
+  const [newCaption, setNewCaption] = useState('');
+  const [newLink, setNewLink] = useState('');
+  const [newLabel, setNewLabel] = useState('Get Offer');
 
   const activeStory = viewingIndex !== null ? stories[viewingIndex] : null;
 
+  useEffect(() => {
+    if (!activeStory || isPaused) return;
+
+    const duration = activeStory.type === 'video' ? 10000 : 5000;
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          handleNext();
+          return 0;
+        }
+        return prev + (100 / (duration / 50));
+      });
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [activeStory, isPaused]);
+
+  const handleNext = () => {
+    if (viewingIndex !== null) {
+      if (viewingIndex < stories.length - 1) {
+        setViewingIndex(viewingIndex + 1);
+        setProgress(0);
+      } else {
+        closeViewer();
+      }
+    }
+  };
+
+  const handlePrev = () => {
+    if (viewingIndex !== null) {
+      if (viewingIndex > 0) {
+        setViewingIndex(viewingIndex - 1);
+        setProgress(0);
+      } else {
+        closeViewer();
+      }
+    }
+  };
+
+  const closeViewer = () => {
+    setViewingIndex(null);
+    setProgress(0);
+    setIsPaused(false);
+    setShowMenu(false);
+    setReplyText("");
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files?.[0]) {
       const file = e.target.files[0];
       setPendingFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => setPendingPreview(reader.result as string);
+      reader.onload = (ev) => setPendingPreview(ev.target?.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handlePostStory = () => {
+  const handleUpload = () => {
     if (pendingFile) {
-      onAddStory(pendingFile, newStoryCaption, newStoryLink, newStoryLabel);
+      onAddStory(pendingFile, newCaption, newLink, newLabel);
       setPendingFile(null);
       setPendingPreview(null);
-      setNewStoryCaption("Just added this! ✨");
-      setNewStoryLink("");
-      setNewStoryLabel("Get Offer");
+      setNewCaption('');
+      setNewLink('');
     }
   };
 
-  const cancelUpload = () => {
-    setPendingFile(null);
-    setPendingPreview(null);
-  };
-
-  const closeStory = () => {
-    setViewingIndex(null);
-    setProgress(0);
-    setShowMenu(false);
-    setShowDeleteConfirm(false);
-    setShowEditModal(false);
-    setIsPaused(false);
-  };
-
-  const nextStory = () => {
-    if (viewingIndex !== null && viewingIndex < stories.length - 1) {
-      setViewingIndex(viewingIndex + 1);
-      setProgress(0);
-    } else {
-      closeStory();
+  const handleDelete = () => {
+    if (activeStory) {
+      onDeleteStory(activeStory.id);
+      closeViewer();
     }
   };
 
-  const prevStory = () => {
-    if (viewingIndex !== null && viewingIndex > 0) {
-      setViewingIndex(viewingIndex - 1);
-      setProgress(0);
+  const handleEdit = () => {
+    if (activeStory) {
+      setEditCaptionText(activeStory.caption || '');
+      setShowEditModal(true);
+      setIsPaused(true);
     }
   };
 
-  // Timer Logic
-  useEffect(() => {
-    if (!activeStory || isPaused || showMenu || showDeleteConfirm || showEditModal) return;
-
-    const duration = activeStory.type === 'video' ? (videoRef.current?.duration || 15) * 1000 : 5000;
-    const intervalTime = 50;
-    const step = 100 / (duration / intervalTime);
-
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          return 100;
-        }
-        return prev + step;
-      });
-    }, intervalTime);
-
-    return () => clearInterval(timer);
-  }, [activeStory, viewingIndex, isPaused, showMenu, showDeleteConfirm, showEditModal]);
-
-  // Handle completion when progress hits 100
-  useEffect(() => {
-    if (progress >= 100) {
-      nextStory();
-    }
-  }, [progress]);
-
-  // Handle Edit
-  const handleEditClick = () => {
-    if (!activeStory) return;
-    setEditCaptionText(activeStory.caption || "");
-    setShowMenu(false);
-    setShowEditModal(true);
-    setIsPaused(true);
-  };
-
-  const handleSaveEdit = () => {
+  const saveEdit = () => {
     if (activeStory) {
       onEditStory(activeStory.id, editCaptionText);
       setShowEditModal(false);
       setIsPaused(false);
+      setShowMenu(false);
     }
   };
 
-  // Handle Delete
-  const handleDeleteClick = () => {
-    setShowMenu(false);
-    setShowDeleteConfirm(true);
-    setIsPaused(true);
-  };
-
-  const confirmDelete = () => {
-    if (activeStory) {
-      onDeleteStory(activeStory.id);
-      closeStory();
+  const handleSendReply = () => {
+    if (replyText.trim() && activeStory && onReplyToStory) {
+      onReplyToStory(activeStory.id, replyText);
+      setReplyText("");
+      // Optional: Show some visual feedback or close viewer
+      setIsPaused(false);
     }
   };
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 sm:rounded-xl border-b border-gray-100 dark:border-gray-700 sm:border p-4 mb-6 overflow-x-auto no-scrollbar">
-        <div className="flex space-x-4 min-w-max">
-          {/* My Story Add Button */}
-          <div className="flex flex-col items-center space-y-1 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-            <div className="relative w-16 h-16">
-              <img 
-                src={currentUser.avatar} 
-                alt="My Story" 
-                className="w-full h-full rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700 p-0.5"
-              />
-              <div className="absolute bottom-0 right-0 bg-brand-500 text-white rounded-full p-1 border-2 border-white dark:border-gray-800">
-                <Plus className="w-3 h-3" />
-              </div>
-            </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Your Story</span>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*,video/*" 
-              onChange={handleFileChange}
-            />
+      <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide px-1">
+        {/* Add Story Button */}
+        <div className="flex flex-col items-center space-y-1 min-w-[72px]">
+          <div 
+            className="w-[72px] h-[72px] rounded-full p-[2px] border-2 border-dashed border-gray-300 dark:border-gray-600 relative cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+             <img src={currentUser.avatar} className="w-full h-full rounded-full object-cover opacity-50" alt="Me" />
+             <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-brand-600 rounded-full p-1 text-white shadow-md">
+                   <Plus className="w-5 h-5" />
+                </div>
+             </div>
+             <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" onChange={handleFileChange} />
           </div>
-
-          {/* Other Stories */}
-          {stories.map((story, idx) => (
-            <div 
-              key={story.id} 
-              className="flex flex-col items-center space-y-1 cursor-pointer group"
-              onClick={() => setViewingIndex(idx)}
-            >
-              <div className={`w-16 h-16 rounded-full p-[2px] ${story.viewed ? 'bg-gray-300 dark:bg-gray-600' : 'bg-gradient-to-tr from-yellow-400 to-fuchsia-600 group-hover:from-yellow-300 group-hover:to-fuchsia-500'}`}>
-                <img 
-                  src={story.user.avatar} 
-                  alt={story.user.handle} 
-                  className="w-full h-full rounded-full object-cover border-2 border-white dark:border-gray-900" 
-                />
-              </div>
-              <span className="text-xs text-gray-900 dark:text-gray-300 w-16 truncate text-center">
-                {story.user.handle}
-              </span>
-            </div>
-          ))}
+          <span className="text-xs text-gray-500 dark:text-gray-400">Add Story</span>
         </div>
+
+        {/* Story List */}
+        {stories.map((story, index) => (
+          <div 
+            key={story.id} 
+            className="flex flex-col items-center space-y-1 min-w-[72px] cursor-pointer group"
+            onClick={() => { setViewingIndex(index); setProgress(0); }}
+          >
+            <div className={`w-[72px] h-[72px] rounded-full p-[2px] ${!story.viewed ? 'bg-gradient-to-tr from-brand-500 to-purple-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
+               <div className="w-full h-full rounded-full border-2 border-white dark:border-gray-900 overflow-hidden">
+                 <img src={story.user.avatar} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={story.user.name} />
+               </div>
+            </div>
+            <span className="text-xs text-gray-900 dark:text-white truncate w-16 text-center">{story.user.handle}</span>
+          </div>
+        ))}
       </div>
 
-      {/* Upload Story Modal */}
+      {/* Story Viewer Overlay */}
       <AnimatePresence>
-        {pendingPreview && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-[100] bg-white dark:bg-gray-900 flex flex-col"
-          >
-             <div className="p-4 border-b dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-900 sticky top-0 z-10">
-                <button onClick={cancelUpload} className="text-gray-600 dark:text-gray-300"><X className="w-6 h-6" /></button>
-                <h2 className="text-lg font-bold dark:text-white">New Story</h2>
-                <button onClick={handlePostStory} className="text-brand-600 font-bold">Share</button>
-             </div>
-             
-             <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                <div className="aspect-[9/16] w-full max-w-sm mx-auto bg-black rounded-xl overflow-hidden shadow-xl">
-                   {pendingFile?.type.startsWith('video') ? (
-                     <video src={pendingPreview} className="w-full h-full object-contain" autoPlay loop muted playsInline />
-                   ) : (
-                     <img src={pendingPreview} className="w-full h-full object-contain" />
-                   )}
-                </div>
-
-                <div className="space-y-4 max-w-sm mx-auto">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium dark:text-gray-300">Caption</label>
-                        <input 
-                          type="text" 
-                          className="w-full p-3 rounded-xl border dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
-                          value={newStoryCaption}
-                          onChange={e => setNewStoryCaption(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="bg-brand-50 dark:bg-brand-900/20 p-4 rounded-xl space-y-3">
-                        <div className="flex items-center space-x-2 text-brand-700 dark:text-brand-400 font-semibold mb-1">
-                          <Briefcase className="w-4 h-4" />
-                          <span>Affiliate Details (Optional)</span>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium dark:text-gray-400">Product Link</label>
-                          <input 
-                            type="url" 
-                            className="w-full p-2 rounded-lg border dark:border-gray-700 dark:bg-gray-800 dark:text-white text-sm"
-                            placeholder="https://..."
-                            value={newStoryLink}
-                            onChange={e => setNewStoryLink(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium dark:text-gray-400">Button Label</label>
-                          <input 
-                            type="text" 
-                            className="w-full p-2 rounded-lg border dark:border-gray-700 dark:bg-gray-800 dark:text-white text-sm"
-                            placeholder="e.g. 50% OFF"
-                            value={newStoryLabel}
-                            onChange={e => setNewStoryLabel(e.target.value)}
-                          />
-                        </div>
-                    </div>
-                </div>
-             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Full Screen Story Viewer */}
-      <AnimatePresence>
-        {activeStory && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 bg-black flex items-center justify-center"
-          >
-            {/* Top Controls Container */}
-            <div className="absolute top-4 left-0 right-0 z-[60] px-4 flex justify-between items-start pointer-events-none">
-                {/* Header User Info */}
-                <div className="flex items-center space-x-2 mt-2 pointer-events-auto">
-                   <img src={activeStory.user.avatar} className="w-8 h-8 rounded-full border border-white/50" />
-                   <div className="flex flex-col">
-                     <span className="text-white font-semibold text-sm drop-shadow-md leading-none">{activeStory.user.handle}</span>
-                     <span className="text-white/70 text-xs drop-shadow-md mt-0.5">• {new Date(activeStory.expiresAt - 86400000).getHours()}h</span>
-                   </div>
-                </div>
-
-                {/* Right Side Buttons */}
-                <div className="flex items-center space-x-2 pointer-events-auto">
-                    {activeStory.userId === currentUser.id && (
-                      <div className="relative">
-                        <button 
-                           onClick={() => {
-                             setShowMenu(!showMenu);
-                             setIsPaused(!showMenu);
-                           }}
-                           className="text-white p-2 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/40"
-                        >
-                          <MoreHorizontal className="w-6 h-6" />
-                        </button>
-                        
-                        {/* Dropdown Menu */}
-                        {showMenu && (
-                          <div className="absolute top-full right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden py-1 z-[70]">
-                            <button 
-                              onClick={handleEditClick}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                            >
-                              <Edit2 className="w-4 h-4" /> Edit Caption
-                            </button>
-                            <button 
-                              onClick={handleDeleteClick}
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" /> Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <button onClick={closeStory} className="text-white p-2 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/40">
-                      <X className="w-6 h-6" />
-                    </button>
-                </div>
-            </div>
-
-            {/* Progress Bar Container */}
-            <div className="absolute top-0 left-0 right-0 p-2 z-[60] flex space-x-1 pointer-events-none">
-               {stories.map((_, idx) => (
-                 <div key={idx} className="h-1 bg-white/30 flex-1 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-white transition-all duration-100 ease-linear"
-                      style={{ 
-                        width: idx < (viewingIndex || 0) ? '100%' : idx === viewingIndex ? `${progress}%` : '0%' 
-                      }}
-                    />
-                 </div>
-               ))}
-            </div>
-
-            {/* Tap Navigation Areas */}
-            <div className="absolute inset-y-0 left-0 w-1/3 z-40" onClick={prevStory} onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}></div>
-            <div className="absolute inset-y-0 right-0 w-1/3 z-40" onClick={nextStory} onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}></div>
-
-            {/* Content */}
-            <div className="w-full h-full md:max-w-md md:h-[90vh] md:rounded-2xl overflow-hidden relative bg-gray-900 flex items-center justify-center">
-               {activeStory.type === 'video' ? (
-                 <video 
-                   ref={videoRef}
-                   src={activeStory.mediaUrl} 
-                   className="w-full h-full object-cover" 
-                   autoPlay 
-                   muted={false} 
-                   playsInline
-                   onEnded={nextStory}
-                   onTimeUpdate={(e) => {
-                      if(activeStory.type === 'video' && !isPaused && !showMenu && !showDeleteConfirm && !showEditModal) {
-                        const pct = (e.currentTarget.currentTime / e.currentTarget.duration) * 100;
-                        setProgress(pct);
-                      }
-                   }}
-                 />
-               ) : (
-                 <img src={activeStory.mediaUrl} className="w-full h-full object-cover" />
-               )}
-               
-               {/* Caption & Affiliate Link Overlay */}
-               {(!showEditModal && (activeStory.caption || activeStory.affiliateLink)) && (
-                 <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent text-white z-50 pointer-events-auto flex flex-col items-center gap-4">
-                    
-                    {/* Affiliate Button */}
-                    {activeStory.affiliateLink && (
-                        <a 
-                        href={activeStory.affiliateLink} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between w-full max-w-xs bg-white/10 backdrop-blur-md border border-white/20 p-2.5 rounded-xl shadow-lg hover:bg-white/20 transition-all group/link cursor-pointer"
-                        onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex items-center space-x-3">
-                                <div className="bg-brand-500 p-2 rounded-lg">
-                                    <ShoppingBag className="w-4 h-4 text-white" />
-                                </div>
-                                <div className="flex flex-col text-left">
-                                    <span className="text-[10px] font-bold text-brand-300 uppercase tracking-wider">Affiliate Deal</span>
-                                    <span className="text-sm font-bold text-white leading-tight">{activeStory.affiliateLabel || 'Shop Now'}</span>
-                                </div>
-                            </div>
-                            <ExternalLink className="w-4 h-4 text-white/70 group-hover/link:text-white" />
-                        </a>
-                    )}
-
-                    {/* Caption */}
-                    {activeStory.caption && (
-                        <p className="text-center font-medium drop-shadow-md text-lg leading-relaxed max-w-xs">{activeStory.caption}</p>
-                    )}
-                 </div>
-               )}
-            </div>
-
-            {/* Edit Caption Modal */}
-            {showEditModal && (
-              <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-xs shadow-2xl transform scale-100">
-                    <div className="flex flex-col space-y-4">
-                       <h3 className="text-lg font-bold text-gray-900 dark:text-white text-center">Edit Caption</h3>
-                       <textarea 
-                          value={editCaptionText}
-                          onChange={(e) => setEditCaptionText(e.target.value)}
-                          className="w-full p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none resize-none"
-                          rows={3}
-                          placeholder="Write a caption..."
-                          autoFocus
+        {viewingIndex !== null && activeStory && (
+           <motion.div 
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             exit={{ opacity: 0 }}
+             className="fixed inset-0 z-50 bg-black flex items-center justify-center"
+           >
+              {/* Progress Bar */}
+              <div className="absolute top-4 left-4 right-4 flex space-x-1 z-20">
+                 {stories.map((s, i) => (
+                    <div key={s.id} className="h-1 bg-white/30 rounded-full flex-1 overflow-hidden">
+                       <div 
+                         className="h-full bg-white transition-all duration-100 ease-linear"
+                         style={{ 
+                           width: i < viewingIndex ? '100%' : i === viewingIndex ? `${progress}%` : '0%' 
+                         }}
                        />
-                       <div className="flex space-x-3 w-full">
-                          <button 
-                            onClick={() => {
-                              setShowEditModal(false);
-                              setIsPaused(false);
-                            }}
-                            className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700"
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            onClick={handleSaveEdit}
-                            className="flex-1 py-2.5 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2"
-                          >
-                            <Check className="w-4 h-4" /> Save
-                          </button>
-                       </div>
                     </div>
+                 ))}
+              </div>
+
+              {/* Header */}
+              <div className="absolute top-8 left-4 right-4 flex items-center justify-between z-20 text-white">
+                 <div className="flex items-center space-x-2">
+                    <img src={activeStory.user.avatar} className="w-8 h-8 rounded-full border border-white/50" />
+                    <span className="font-semibold text-sm">{activeStory.user.handle}</span>
+                    <span className="text-white/60 text-xs">• {new Date(activeStory.expiresAt - 86400000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                 </div>
+                 <div className="flex items-center space-x-4">
+                    {activeStory.userId === currentUser.id && (
+                       <div className="relative">
+                          <button onClick={() => { setShowMenu(!showMenu); setIsPaused(true); }}>
+                             <MoreHorizontal className="w-6 h-6" />
+                          </button>
+                          {showMenu && (
+                            <div className="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden text-gray-900 dark:text-white">
+                               <button onClick={handleEdit} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><Edit2 className="w-3 h-3"/> Edit</button>
+                               <button onClick={handleDelete} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500 flex items-center gap-2"><Trash2 className="w-3 h-3"/> Delete</button>
+                            </div>
+                          )}
+                       </div>
+                    )}
+                    <button onClick={closeViewer}><X className="w-8 h-8" /></button>
                  </div>
               </div>
-            )}
 
-            {/* Delete Confirmation Dialog */}
-            {showDeleteConfirm && (
-               <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-xs shadow-2xl transform scale-100">
-                     <div className="flex flex-col items-center text-center space-y-4">
-                        <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600">
-                           <Trash2 className="w-6 h-6" />
+              {/* Navigation Zones (Hidden tap areas) */}
+              <div className="absolute inset-0 flex z-10">
+                 <div className="w-1/3 h-full" onClick={handlePrev}></div>
+                 <div className="w-1/3 h-full" onClick={() => setIsPaused(!isPaused)}></div>
+                 <div className="w-1/3 h-full" onClick={handleNext}></div>
+              </div>
+
+              {/* Content */}
+              <div className="w-full h-full max-w-lg aspect-[9/16] bg-gray-900 relative flex flex-col justify-end">
+                 <div className="absolute inset-0 z-0">
+                    {activeStory.type === 'video' ? (
+                        <video 
+                        src={activeStory.mediaUrl} 
+                        className="w-full h-full object-cover" 
+                        autoPlay 
+                        playsInline
+                        onEnded={handleNext}
+                        ref={videoRef}
+                        />
+                    ) : (
+                        <img src={activeStory.mediaUrl} className="w-full h-full object-cover" />
+                    )}
+                 </div>
+                 
+                 {/* Dark Overlay for Text Readability */}
+                 <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 pointer-events-none"></div>
+
+                 {/* Caption */}
+                 {activeStory.caption && (
+                    <div className="relative z-20 px-4 mb-4 text-center">
+                       <p className="text-white text-lg font-medium drop-shadow-md">{activeStory.caption}</p>
+                    </div>
+                 )}
+
+                 {/* Affiliate Link (Restored) */}
+                 {activeStory.affiliateLink && (
+                    <div className="relative z-30 flex justify-center mb-6">
+                       <a 
+                         href={activeStory.affiliateLink}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="bg-white text-black px-5 py-2.5 rounded-full font-bold text-sm flex items-center space-x-2 shadow-xl hover:scale-105 transition-transform active:scale-95"
+                         onClick={(e) => {
+                             e.stopPropagation();
+                             setIsPaused(true);
+                         }}
+                       >
+                          <ShoppingBag className="w-4 h-4" />
+                          <span>{activeStory.affiliateLabel || 'Shop Now'}</span>
+                          <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
+                       </a>
+                    </div>
+                 )}
+
+                 {/* Message Reply Input (Instagram Style) */}
+                 {activeStory.userId !== currentUser.id && (
+                     <div className="relative z-30 px-4 pb-4 pt-2 flex items-center space-x-3">
+                        <div className="flex-1 relative">
+                            <input 
+                                type="text" 
+                                placeholder="Send message..." 
+                                className="w-full bg-transparent border border-white/40 rounded-full py-3 px-4 text-white placeholder-white/70 focus:outline-none focus:border-white focus:bg-white/10 transition-colors backdrop-blur-sm"
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                onFocus={() => setIsPaused(true)}
+                                onBlur={() => setIsPaused(false)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSendReply()}
+                            />
                         </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Story?</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            Are you sure you want to delete this story? This action cannot be undone.
-                          </p>
-                        </div>
-                        <div className="flex space-x-3 w-full">
-                           <button 
-                             onClick={() => {
-                               setShowDeleteConfirm(false);
-                               setIsPaused(false);
-                             }}
-                             className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700"
-                           >
-                             Cancel
-                           </button>
-                           <button 
-                             onClick={confirmDelete}
-                             className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 shadow-lg shadow-red-500/30"
-                           >
-                             Delete
-                           </button>
-                        </div>
+                        <button className="p-2 transition-transform active:scale-90">
+                            <Heart className="w-7 h-7 text-white" />
+                        </button>
+                        <button 
+                            className="p-2 transition-transform active:scale-90"
+                            onClick={handleSendReply}
+                        >
+                            <Send className="w-7 h-7 text-white -rotate-12" />
+                        </button>
                      </div>
-                  </div>
-               </div>
-            )}
-          </motion.div>
+                 )}
+                 {/* Spacer for bottom safe area if own story */}
+                 {activeStory.userId === currentUser.id && <div className="h-8"></div>}
+              </div>
+           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Upload Preview Modal */}
+      {pendingFile && pendingPreview && (
+         <div className="fixed inset-0 z-[60] bg-black flex flex-col">
+            <div className="flex items-center justify-between p-4 text-white">
+               <button onClick={() => setPendingFile(null)}><X className="w-6 h-6" /></button>
+               <h3 className="font-bold">New Story</h3>
+               <button onClick={handleUpload} className="text-brand-500 font-bold">Share</button>
+            </div>
+            <div className="flex-1 relative bg-gray-900 flex items-center justify-center">
+               {pendingFile.type.startsWith('video') ? (
+                  <video src={pendingPreview} className="max-h-full max-w-full" controls />
+               ) : (
+                  <img src={pendingPreview} className="max-h-full max-w-full" />
+               )}
+            </div>
+            <div className="p-4 bg-gray-900 text-white space-y-3 pb-safe-area">
+               <input 
+                 type="text" 
+                 placeholder="Add a caption..." 
+                 className="w-full bg-transparent border-b border-gray-700 p-2 outline-none"
+                 value={newCaption}
+                 onChange={e => setNewCaption(e.target.value)}
+               />
+               
+               {/* Restored Affiliate Inputs */}
+               <div className="bg-gray-800 rounded-xl p-3">
+                   <div className="flex items-center space-x-2 text-brand-400 mb-2 font-semibold text-xs uppercase tracking-wide">
+                        <ShoppingBag className="w-3 h-3" />
+                        <span>Add Affiliate Deal</span>
+                   </div>
+                   <div className="flex space-x-2">
+                      <input 
+                        type="url" 
+                        placeholder="Link (https://...)" 
+                        className="flex-1 bg-gray-900/50 rounded-lg p-2 text-sm outline-none border border-transparent focus:border-gray-600 transition-colors"
+                        value={newLink}
+                        onChange={e => setNewLink(e.target.value)}
+                      />
+                       <input 
+                        type="text" 
+                        placeholder="Label" 
+                        className="w-24 bg-gray-900/50 rounded-lg p-2 text-sm outline-none border border-transparent focus:border-gray-600 transition-colors"
+                        value={newLabel}
+                        onChange={e => setNewLabel(e.target.value)}
+                      />
+                   </div>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 w-full max-w-sm">
+              <h3 className="font-bold mb-2 dark:text-white">Edit Caption</h3>
+              <input 
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white mb-4"
+                value={editCaptionText}
+                onChange={e => setEditCaptionText(e.target.value)}
+              />
+              <div className="flex justify-end space-x-2">
+                 <button onClick={() => { setShowEditModal(false); setIsPaused(false); }} className="px-3 py-1 text-gray-500">Cancel</button>
+                 <button onClick={saveEdit} className="px-3 py-1 bg-brand-600 text-white rounded">Save</button>
+              </div>
+           </div>
+        </div>
+      )}
     </>
   );
 };

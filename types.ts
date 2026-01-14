@@ -52,10 +52,12 @@ export interface Message {
   senderId: string;
   receiverId: string;
   text: string;
+  mediaUrl?: string; // New: For photo/video URL
+  mediaType?: 'image' | 'video'; // New: Type of media
   timestamp: number;
   isRead: boolean;
   isEdited?: boolean;
-  liked?: boolean; // New field for double-tap reaction
+  liked?: boolean;
 }
 
 export type Theme = 'light' | 'dark';
