@@ -136,7 +136,7 @@ const StoryTray: React.FC<StoryTrayProps> = ({ stories, currentUser, onAddStory,
 
   return (
     <>
-      <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide px-1">
+      <div className="flex space-x-4 overflow-x-auto pb-4 no-scrollbar px-1">
         {/* Add Story Button */}
         <div className="flex flex-col items-center space-y-1 min-w-[72px]">
           <div 
