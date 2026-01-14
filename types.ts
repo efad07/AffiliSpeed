@@ -47,4 +47,14 @@ export interface Story {
   viewed: boolean;
 }
 
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  timestamp: number;
+  isRead: boolean;
+  isEdited?: boolean;
+}
+
 export type Theme = 'light' | 'dark';

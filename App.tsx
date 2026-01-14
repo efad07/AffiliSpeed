@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus } from 'lucide-react';
-import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS } from './constants';
-import { Post, User as UserType, Story, Comment } from './types';
+import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare } from 'lucide-react';
+import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS, INITIAL_MESSAGES } from './constants';
+import { Post, User as UserType, Story, Comment, Message } from './types';
 import PostCard from './components/PostCard';
 import StoryTray from './components/StoryTray';
 import { generateSmartCaption } from './services/geminiService';
@@ -477,9 +477,209 @@ const NetworkList = ({
   )
 }
 
-// 7. User Profile
+// 7. Inbox (Message List)
+const Inbox = ({ messages, users, currentUser }: { messages: Message[], users: UserType[], currentUser: UserType }) => {
+  const navigate = useNavigate();
+
+  // Group messages by conversation partner
+  const conversations = users.map(user => {
+    const userMessages = messages.filter(m => 
+      (m.senderId === user.id && m.receiverId === currentUser.id) || 
+      (m.senderId === currentUser.id && m.receiverId === user.id)
+    );
+    
+    // Sort by timestamp descending
+    userMessages.sort((a, b) => b.timestamp - a.timestamp);
+    
+    const lastMessage = userMessages[0];
+    const unreadCount = userMessages.filter(m => m.receiverId === currentUser.id && !m.isRead).length;
+
+    return {
+      user,
+      lastMessage,
+      unreadCount
+    };
+  }).filter(c => c.lastMessage); // Only show conversations with messages
+
+  // Also include users you follow but haven't messaged yet? (Optional, skipping for now to keep clean)
+
+  return (
+    <div className="max-w-xl mx-auto bg-white dark:bg-gray-900 min-h-screen pb-20">
+      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
+        <div className="flex items-center">
+            <button onClick={() => navigate('/')} className="mr-3 text-gray-900 dark:text-white">
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <h1 className="font-bold text-lg dark:text-white">Messages</h1>
+        </div>
+        <button className="text-brand-600 dark:text-brand-400">
+            <Edit2 className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+        {conversations.length === 0 ? (
+          <div className="p-10 text-center text-gray-500">
+            <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <p>No messages yet.</p>
+            <p className="text-sm">Start a conversation with someone!</p>
+          </div>
+        ) : (
+          conversations.map(convo => (
+            <Link 
+              to={`/messages/${convo.user.id}`} 
+              key={convo.user.id}
+              className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            >
+              <div className="relative mr-3">
+                 <img src={convo.user.avatar} className="w-14 h-14 rounded-full object-cover" />
+                 {convo.unreadCount > 0 && (
+                   <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900">
+                     {convo.unreadCount}
+                   </div>
+                 )}
+              </div>
+              <div className="flex-1 min-w-0">
+                 <div className="flex justify-between items-baseline mb-1">
+                   <h3 className="font-semibold text-gray-900 dark:text-white truncate pr-2">
+                     {convo.user.name}
+                   </h3>
+                   <span className="text-xs text-gray-500 flex-shrink-0">
+                     {new Date(convo.lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                   </span>
+                 </div>
+                 <p className={`text-sm truncate ${convo.unreadCount > 0 ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                   {convo.lastMessage.senderId === currentUser.id ? 'You: ' : ''}{convo.lastMessage.text}
+                 </p>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+// 8. Chat Room (Individual Conversation)
+const ChatRoom = ({ messages, users, currentUser, onSend, onEdit }: { messages: Message[], users: UserType[], currentUser: UserType, onSend: (text: string, receiverId: string) => void, onEdit: (id: string, text: string) => void }) => {
+  const { userId } = useParams();
+  const navigate = useNavigate();
+  const [text, setText] = useState('');
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const partner = users.find(u => u.id === userId);
+
+  // Filter messages for this chat
+  const chatMessages = messages.filter(m => 
+    (m.senderId === currentUser.id && m.receiverId === userId) ||
+    (m.senderId === userId && m.receiverId === currentUser.id)
+  ).sort((a, b) => a.timestamp - b.timestamp);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [chatMessages.length]);
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (text.trim() && userId) {
+      onSend(text, userId);
+      setText('');
+    }
+  };
+
+  if (!partner) return <div>User not found</div>;
+
+  return (
+    <div className="max-w-xl mx-auto bg-white dark:bg-gray-900 h-screen flex flex-col">
+       {/* Header */}
+       <div className="flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-10">
+          <button onClick={() => navigate('/messages')} className="mr-3 text-gray-900 dark:text-white">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="flex items-center space-x-3 flex-1">
+             <img src={partner.avatar} className="w-10 h-10 rounded-full object-cover" />
+             <div>
+                <h2 className="font-bold text-sm dark:text-white">{partner.name}</h2>
+                <p className="text-xs text-gray-500">Active now</p>
+             </div>
+          </div>
+       </div>
+
+       {/* Messages Area */}
+       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-black" ref={scrollRef}>
+          {chatMessages.map(msg => {
+            const isMe = msg.senderId === currentUser.id;
+            return (
+              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
+                 <div className={`relative max-w-[75%] px-4 py-2.5 rounded-2xl ${
+                   isMe 
+                     ? 'bg-brand-600 text-white rounded-br-none' 
+                     : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-none shadow-sm'
+                 }`}>
+                    <p className="text-sm">
+                      {msg.text}
+                      {msg.isEdited && <span className="opacity-60 text-[10px] ml-1">(edited)</span>}
+                    </p>
+                    {isMe && (
+                      <button 
+                        onClick={() => setEditingMessage(msg)}
+                        className="absolute -left-8 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-brand-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Edit Message"
+                      >
+                         <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                 </div>
+              </div>
+            );
+          })}
+          {chatMessages.length === 0 && (
+             <div className="text-center text-gray-400 text-sm mt-10">
+               Say hi to {partner.name}! 👋
+             </div>
+          )}
+       </div>
+
+       {/* Input Area */}
+       <form onSubmit={handleSend} className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center space-x-2 pb-safe-area">
+          <input 
+            type="text" 
+            placeholder="Message..." 
+            className="flex-1 bg-gray-100 dark:bg-gray-800 border-none rounded-full py-2.5 px-4 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
+            value={text}
+            onChange={e => setText(e.target.value)}
+          />
+          <button 
+            type="submit" 
+            disabled={!text.trim()}
+            className="p-2.5 bg-brand-600 text-white rounded-full hover:bg-brand-700 disabled:opacity-50 transition-colors shadow-lg shadow-brand-500/30"
+          >
+             <Send className="w-5 h-5 ml-0.5" />
+          </button>
+       </form>
+
+       {/* Edit Message Modal */}
+       {editingMessage && (
+         <EditMessageModal 
+           message={editingMessage}
+           onSave={(id, newText) => {
+             onEdit(id, newText);
+             setEditingMessage(null);
+           }}
+           onCancel={() => setEditingMessage(null)}
+         />
+       )}
+    </div>
+  );
+};
+
+// 9. User Profile (Updated to include navigation to chat)
 const Profile = ({ user, posts, isMe, onDelete, onEdit }: { user: UserType, posts: Post[], isMe?: boolean, onDelete?: (id: string) => void, onEdit?: (post: Post) => void }) => {
   const userPosts = posts.filter(p => p.userId === user.id);
+  const navigate = useNavigate();
   
   return (
     <div className="max-w-xl mx-auto pb-20 bg-white dark:bg-gray-900 min-h-screen">
@@ -532,7 +732,13 @@ const Profile = ({ user, posts, isMe, onDelete, onEdit }: { user: UserType, post
           ) : (
             <>
               <Button className="flex-1">Follow</Button>
-              <Button variant="secondary" className="flex-1">Message</Button>
+              <Button 
+                variant="secondary" 
+                className="flex-1"
+                onClick={() => navigate(`/messages/${user.id}`)}
+              >
+                Message
+              </Button>
             </>
           )}
         </div>
@@ -583,583 +789,289 @@ const Profile = ({ user, posts, isMe, onDelete, onEdit }: { user: UserType, post
   );
 };
 
-// 8. Edit Post Modal
-const EditPostModal = ({ post, onSave, onCancel }: { post: Post, onSave: (post: Post) => void, onCancel: () => void }) => {
-  const [caption, setCaption] = useState(post.caption);
-  const [affiliateLink, setAffiliateLink] = useState(post.affiliateLink || '');
-  const [affiliateLabel, setAffiliateLabel] = useState(post.affiliateLabel || '');
+// 10. NavItem
+const NavItem = ({ to, icon: Icon, active }: { to: string, icon: any, active: boolean }) => (
+  <Link to={to} className={`flex flex-col items-center justify-center space-y-1 w-16 h-full transition-colors ${active ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+    <Icon className={`w-6 h-6 ${active ? 'fill-current' : ''}`} strokeWidth={active ? 2.5 : 2} />
+  </Link>
+);
 
-  const handleSave = () => {
-    onSave({
-      ...post,
-      caption,
-      affiliateLink: affiliateLink || undefined,
-      affiliateLabel: affiliateLabel || undefined
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-       <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-             <h2 className="text-lg font-bold dark:text-white">Edit Post</h2>
-             <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                <ChevronLeft className="w-6 h-6 rotate-180" /> 
-             </button>
-          </div>
-          
-          <div className="p-4 overflow-y-auto space-y-4">
-             {/* Preview */}
-             <div className="aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
-                {post.type === 'video' ? (
-                   <video src={post.url} className="h-full w-full object-contain" />
-                ) : (
-                   <img src={post.url} className="h-full w-full object-contain" />
-                )}
-             </div>
-
-             {/* Caption */}
-             <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Caption</label>
-                <textarea 
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none resize-none"
-                  rows={4}
-                />
-             </div>
-
-             {/* Affiliate Data */}
-             <div className="bg-brand-50 dark:bg-brand-900/10 p-4 rounded-xl space-y-3 border border-brand-100 dark:border-brand-900/20">
-                 <div className="flex items-center space-x-2 text-brand-700 dark:text-brand-400 font-semibold mb-1">
-                   <Briefcase className="w-4 h-4" />
-                   <span>Affiliate Details</span>
-                 </div>
-                 <div>
-                   <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Product Link</label>
-                   <input 
-                     type="url" 
-                     className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm"
-                     value={affiliateLink}
-                     onChange={e => setAffiliateLink(e.target.value)}
-                   />
-                 </div>
-                 <div>
-                   <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Label</label>
-                   <input 
-                     type="text" 
-                     className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm"
-                     value={affiliateLabel}
-                     onChange={e => setAffiliateLabel(e.target.value)}
-                   />
-                 </div>
-             </div>
-          </div>
-
-          <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-3">
-             <button 
-               onClick={onCancel}
-               className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700"
-             >
-               Cancel
-             </button>
-             <button 
-               onClick={handleSave}
-               className="flex-1 py-2.5 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 shadow-lg shadow-brand-500/30"
-             >
-               Save Changes
-             </button>
-          </div>
-       </div>
-    </div>
-  );
-};
-
-// 9. Comments Modal
-const CommentsModal = ({ 
-  post, 
-  currentUser,
-  onClose, 
-  onAddComment,
-  onDeleteComment,
-  onEditComment
-}: { 
-  post: Post, 
-  currentUser: UserType,
-  onClose: () => void, 
-  onAddComment: (postId: string, text: string) => void,
-  onDeleteComment: (postId: string, commentId: string) => void,
-  onEditComment: (postId: string, commentId: string, newText: string) => void
-}) => {
-  const [text, setText] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const commentsEndRef = useRef<HTMLDivElement>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-    onAddComment(post.id, text);
-    setText("");
-  };
-
-  const handleStartEdit = (comment: Comment) => {
-      setEditingId(comment.id);
-      setEditText(comment.text);
-  };
-
-  const handleSaveEdit = (commentId: string) => {
-      if (editText.trim()) {
-          onEditComment(post.id, commentId, editText);
-          setEditingId(null);
-          setEditText("");
-      }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditText("");
-  };
-
-  useEffect(() => {
-    if (commentsEndRef.current && !editingId) {
-        commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [post.comments.length, editingId]); 
-
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-white dark:bg-gray-900 animate-in slide-in-from-bottom-full duration-300 sm:max-w-md sm:mx-auto sm:h-[90vh] sm:top-auto sm:bottom-0 sm:rounded-t-2xl sm:shadow-2xl sm:border-x sm:border-t dark:border-gray-700">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-         <button onClick={onClose} className="text-gray-900 dark:text-white p-1">
-           <ChevronLeft className="w-6 h-6" />
-         </button>
-         <h2 className="font-bold text-lg dark:text-white">Comments</h2>
-         <div className="w-6"></div> {/* Spacer */}
-      </div>
-
-      {/* Comments List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {post.comments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-2">
-                <MessageCircle className="w-12 h-12 opacity-20" />
-                <p>No comments yet. Start the conversation!</p>
-            </div>
-        ) : (
-            post.comments.map(comment => {
-                const isOwner = comment.userId === currentUser.id;
-                const isEditing = editingId === comment.id;
-
-                return (
-                  <div key={comment.id} className="flex space-x-3 group">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0">
-                          <img 
-                            src={`https://picsum.photos/seed/${comment.userId}/150/150`} 
-                            className="w-full h-full object-cover" 
-                          />
-                      </div>
-                      <div className="flex-1">
-                          <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl rounded-tl-none px-4 py-2 inline-block min-w-[120px]">
-                              <span className="font-semibold text-sm text-gray-900 dark:text-white mr-2 block">
-                                  {comment.username}
-                              </span>
-                              
-                              {isEditing ? (
-                                <div className="mt-1">
-                                   <input 
-                                     type="text" 
-                                     value={editText}
-                                     onChange={(e) => setEditText(e.target.value)}
-                                     className="w-full p-1.5 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white mb-2"
-                                     autoFocus
-                                   />
-                                   <div className="flex space-x-2 text-xs">
-                                     <button onClick={() => handleSaveEdit(comment.id)} className="text-brand-600 font-semibold">Save</button>
-                                     <button onClick={handleCancelEdit} className="text-gray-500">Cancel</button>
-                                   </div>
-                                </div>
-                              ) : (
-                                <span className="text-sm text-gray-700 dark:text-gray-300 break-words whitespace-pre-wrap">
-                                    {comment.text}
-                                </span>
-                              )}
-                          </div>
-                          <div className="flex items-center space-x-3 mt-1 ml-1">
-                              <span className="text-xs text-gray-500">
-                                {new Date(comment.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                              </span>
-                              {isOwner && !isEditing && (
-                                <>
-                                  <button 
-                                    onClick={() => handleStartEdit(comment)}
-                                    className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button 
-                                    onClick={() => onDeleteComment(post.id, comment.id)}
-                                    className="text-xs text-gray-400 hover:text-red-600 font-medium"
-                                  >
-                                    Delete
-                                  </button>
-                                </>
-                              )}
-                          </div>
-                      </div>
-                  </div>
-                );
-            })
-        )}
-        <div ref={commentsEndRef} />
-      </div>
-
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-center space-x-3 pb-safe-area">
-         <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover" />
-         <div className="flex-1 relative">
-            <input 
-              type="text" 
-              placeholder="Add a comment..." 
-              className="w-full bg-gray-100 dark:bg-gray-800 border-none rounded-full py-2.5 px-4 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-         </div>
-         <button 
-           type="submit" 
-           disabled={!text.trim()}
-           className="text-brand-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-         >
-            Post
-         </button>
-      </form>
-    </div>
-  );
-};
-
-// 10. Share Modal
-const ShareModal = ({ post, onClose }: { post: Post, onClose: () => void }) => {
-  const [copied, setCopied] = useState(false);
-  
-  // Robust URL generation: grab the base URL without hash, then append the hash route
-  // Using window.location.href.split('#')[0] ensures we get the correct base path even in complex hosting environments
-  const baseUrl = window.location.href.split('#')[0];
-  const shareUrl = `${baseUrl}#/post/${post.id}`;
-  
-  const shareText = post.caption.length > 100 ? post.caption.substring(0, 100) + '...' : post.caption;
-  const encodedUrl = encodeURIComponent(shareUrl);
-  const encodedText = encodeURIComponent(shareText);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const shareLinks = [
-    { 
-      name: 'Copy Link', 
-      icon: Link2, 
-      action: handleCopy,
-      color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300' 
-    },
-    { 
-      name: 'WhatsApp', 
-      icon: MessageCircle, 
-      url: `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
-      color: 'bg-green-100 text-green-600' 
-    },
-    { 
-      name: 'Facebook', 
-      icon: Facebook, 
-      url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-      color: 'bg-blue-100 text-blue-600' 
-    },
-    { 
-      name: 'X / Twitter', 
-      icon: Twitter, 
-      url: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
-      color: 'bg-slate-100 text-slate-800' 
-    },
-    { 
-      name: 'LinkedIn', 
-      icon: Linkedin, 
-      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-      color: 'bg-blue-50 text-blue-700' 
-    },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-       <div 
-         className="bg-white dark:bg-gray-900 w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 space-y-6 shadow-2xl animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300"
-         onClick={e => e.stopPropagation()}
-       >
-          <div className="flex items-center justify-between">
-             <h3 className="text-lg font-bold dark:text-white">Share to...</h3>
-             <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-               <X className="w-6 h-6 text-gray-500" />
-             </button>
-          </div>
-
-          <div className="grid grid-cols-4 gap-4">
-             {shareLinks.map((link) => (
-               <a 
-                 key={link.name}
-                 href={link.url}
-                 target={link.url ? "_blank" : undefined}
-                 rel="noopener noreferrer"
-                 onClick={(e) => {
-                    if (link.action) {
-                      e.preventDefault();
-                      link.action();
-                    }
-                 }}
-                 className="flex flex-col items-center gap-2 group cursor-pointer"
-               >
-                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl transition-transform active:scale-95 group-hover:scale-105 shadow-sm ${link.color}`}>
-                   <link.icon className="w-7 h-7" />
-                 </div>
-                 <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium text-center leading-tight">{link.name}</span>
-               </a>
-             ))}
-          </div>
-          
-          <div className="pt-2">
-             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 block ml-1">Page Link</label>
-            <div className="flex items-center p-2 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-               <input 
-                 type="text" 
-                 readOnly 
-                 value={shareUrl} 
-                 className="flex-1 bg-transparent border-none text-xs text-gray-900 dark:text-white focus:ring-0 w-full truncate font-medium"
-                 onClick={(e) => e.currentTarget.select()}
-               />
-               <button 
-                 onClick={handleCopy} 
-                 className="text-white bg-brand-600 hover:bg-brand-700 font-bold text-xs ml-2 px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-               >
-                 {copied ? 'COPIED' : 'COPY'}
-               </button>
-            </div>
-          </div>
-       </div>
-       {/* Close on click outside */}
-       <div className="absolute inset-0 -z-10" onClick={onClose}></div>
-    </div>
-  );
-};
-
-// 11. Post Detail Page
-const PostDetail = ({ posts, onLike, onDelete, onEdit, onComment, onShare, currentUser }: { 
-  posts: Post[], 
-  onLike: (id: string) => void, 
-  onDelete: (id: string) => void, 
-  onEdit: (post: Post) => void, 
-  onComment: (id: string) => void,
-  onShare: (id: string) => void,
-  currentUser: UserType 
-}) => {
+// 11. PostDetail
+const PostDetail = ({ posts, onLike, onDelete, onEdit, onComment, onShare, currentUser }: { posts: Post[], onLike: (id: string) => void, onDelete: (id: string) => void, onEdit: (post: Post) => void, onComment: (id: string) => void, onShare: (id: string) => void, currentUser: UserType }) => {
   const { postId } = useParams();
   const navigate = useNavigate();
   const post = posts.find(p => p.id === postId);
 
-  if (!post) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center dark:text-white">
-         <h2 className="text-xl font-bold mb-2">Post not found</h2>
-         <p className="text-gray-500 mb-6">This post may have been deleted or doesn't exist.</p>
-         <Button onClick={() => navigate('/')}>Back to Feed</Button>
-      </div>
-    );
-  }
+  if (!post) return <div className="p-10 text-center dark:text-white">Post not found</div>;
 
   return (
-    <div className="max-w-xl mx-auto min-h-screen bg-gray-50 dark:bg-black pt-safe-area pb-20">
-       <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center">
-          <button onClick={() => navigate(-1)} className="mr-3 text-gray-900 dark:text-white">
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="font-bold text-lg dark:text-white">Post</h1>
+    <div className="max-w-xl mx-auto pb-20 pt-4 px-0 sm:px-4 min-h-screen bg-white dark:bg-gray-900">
+       <div className="flex items-center px-4 py-2 mb-2 sticky top-0 z-10 bg-white dark:bg-gray-900">
+         <button onClick={() => navigate(-1)} className="mr-3 text-gray-900 dark:text-white"><ChevronLeft className="w-6 h-6" /></button>
+         <h1 className="font-bold text-lg dark:text-white">Post</h1>
        </div>
-       <div className="p-0 sm:p-4 mt-2">
-          <PostCard 
-            post={post} 
-            onLike={onLike} 
-            onDelete={onDelete} 
-            onEdit={onEdit} 
-            onCommentClick={onComment}
-            onShare={onShare}
-            isOwner={post.userId === currentUser.id} 
-          />
-       </div>
+       <PostCard 
+          post={post} 
+          onLike={onLike} 
+          onDelete={onDelete}
+          onEdit={onEdit}
+          onCommentClick={onComment}
+          onShare={onShare}
+          isOwner={post.userId === currentUser.id}
+       />
     </div>
   );
 };
 
-// 12. Login Page
+// 12. Login
 const Login = ({ onLogin }: { onLogin: () => void }) => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login
     onLogin();
     navigate('/');
   };
-
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen p-4 bg-white dark:bg-gray-900">
-      <button 
-        onClick={() => navigate('/')} 
-        className="absolute top-6 left-6 p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-10"
-        aria-label="Go back"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
-
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex justify-center mb-4">
-             <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/30">
-               <LogIn className="w-8 h-8 text-white" />
-             </div>
-          </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-brand-500 to-teal-400 bg-clip-text text-transparent">Welcome Back</h1>
-          <p className="text-gray-500 dark:text-gray-400">Sign in to your account</p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input 
-              type="email" 
-              placeholder="Email" 
-              className="w-full p-3.5 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-              required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-          </div>
-          <div>
-            <input 
-              type="password" 
-              placeholder="Password" 
-              className="w-full p-3.5 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-              required
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-          </div>
-          <Button type="submit" className="w-full py-3.5 text-lg shadow-xl shadow-brand-500/20">Sign In</Button>
-        </form>
-        <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-          Don't have an account? <Link to="/signup" className="text-brand-600 font-semibold hover:underline">Sign Up</Link>
-        </div>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-white dark:bg-gray-900">
+      <h1 className="text-4xl font-extrabold mb-8 bg-gradient-to-r from-brand-600 to-teal-400 bg-clip-text text-transparent">AffiliSpeed</h1>
+      <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
+        <input type="email" placeholder="Email" className="w-full p-3 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" required />
+        <input type="password" placeholder="Password" className="w-full p-3 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" required />
+        <Button type="submit" className="w-full py-3">Log In</Button>
+      </form>
+      <p className="mt-4 text-sm text-gray-500">Don't have an account? <Link to="/signup" className="text-brand-600 font-bold hover:underline">Sign Up</Link></p>
     </div>
   );
 };
 
-// 13. Signup Page
-const Signup = ({ onSignup }: { onSignup: (user: UserType) => void }) => {
+// 13. Signup
+const Signup = ({ onSignup }: { onSignup: (u: UserType) => void }) => {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    const newUser: UserType = {
+    const newUser = {
+      ...CURRENT_USER,
       id: `u_${Date.now()}`,
-      name,
-      handle: handle.startsWith('@') ? handle.slice(1) : handle,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-      bio: 'New member!',
-      followers: 0,
-      following: 0
+      name: name || 'New User',
+      handle: handle || 'newuser',
     };
     onSignup(newUser);
     navigate('/');
   };
-
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen p-4 bg-white dark:bg-gray-900">
-       <button 
-        onClick={() => navigate('/')} 
-        className="absolute top-6 left-6 p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-10"
-        aria-label="Go back"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-white dark:bg-gray-900">
+      <h1 className="text-4xl font-extrabold mb-8 bg-gradient-to-r from-brand-600 to-teal-400 bg-clip-text text-transparent">Join AffiliSpeed</h1>
+      <form onSubmit={handleSignup} className="w-full max-w-sm space-y-4">
+        <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" required />
+        <input type="text" placeholder="Username" value={handle} onChange={e => setHandle(e.target.value)} className="w-full p-3 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" required />
+        <input type="email" placeholder="Email" className="w-full p-3 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" required />
+        <input type="password" placeholder="Password" className="w-full p-3 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" required />
+        <Button type="submit" className="w-full py-3">Sign Up</Button>
+      </form>
+      <p className="mt-4 text-sm text-gray-500">Already have an account? <Link to="/login" className="text-brand-600 font-bold hover:underline">Log In</Link></p>
+    </div>
+  );
+};
 
-       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex justify-center mb-4">
-             <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/30">
-               <UserPlus className="w-8 h-8 text-white" />
-             </div>
-          </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-brand-500 to-teal-400 bg-clip-text text-transparent">Create Account</h1>
-          <p className="text-gray-500 dark:text-gray-400">Join the fastest affiliate community</p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input 
-              type="text" 
-              placeholder="Full Name" 
-              className="w-full p-3.5 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-              required
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
-          </div>
-          <div>
-            <input 
-              type="text" 
-              placeholder="@username" 
-              className="w-full p-3.5 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-              required
-              value={handle}
-              onChange={e => setHandle(e.target.value)}
-            />
-          </div>
-          <div>
-            <input 
-              type="email" 
-              placeholder="Email" 
-              className="w-full p-3.5 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-              required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-          </div>
-          <div>
-            <input 
-              type="password" 
-              placeholder="Password" 
-              className="w-full p-3.5 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-              required
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-          </div>
-          <Button type="submit" className="w-full py-3.5 text-lg shadow-xl shadow-brand-500/20">Sign Up</Button>
-        </form>
-        <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-          Already have an account? <Link to="/login" className="text-brand-600 font-semibold hover:underline">Sign In</Link>
+// 14. EditPostModal
+const EditPostModal = ({ post, onSave, onCancel }: { post: Post, onSave: (p: Post) => void, onCancel: () => void }) => {
+  const [caption, setCaption] = useState(post.caption);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-100">
+        <h2 className="text-xl font-bold mb-4 dark:text-white">Edit Post</h2>
+        <textarea 
+          className="w-full p-3 border rounded-xl mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none resize-none" 
+          rows={4} 
+          value={caption} 
+          onChange={e => setCaption(e.target.value)}
+        />
+        <div className="flex justify-end space-x-3">
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button onClick={() => onSave({ ...post, caption })}>Save Changes</Button>
         </div>
       </div>
     </div>
   );
 };
 
-const NavItem = ({ to, icon: Icon, active }: { to: string, icon: any, active?: boolean }) => (
-  <Link to={to} className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${active ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-    <Icon className={`w-6 h-6 ${active ? 'fill-current' : ''}`} />
-  </Link>
-);
+// 15. CommentsModal
+const CommentsModal = ({ post, currentUser, onClose, onAddComment, onDeleteComment, onEditComment }: { 
+    post: Post, 
+    currentUser: UserType, 
+    onClose: () => void, 
+    onAddComment: (postId: string, text: string) => void, 
+    onDeleteComment: (postId: string, commentId: string) => void,
+    onEditComment: (postId: string, commentId: string, text: string) => void
+}) => {
+  const [text, setText] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (text.trim()) {
+      onAddComment(post.id, text);
+      setText('');
+    }
+  };
+
+  const handleEdit = (comment: Comment) => {
+     setEditingId(comment.id);
+     setEditText(comment.text);
+  };
+
+  const saveEdit = (commentId: string) => {
+     onEditComment(post.id, commentId, editText);
+     setEditingId(null);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
+      <div className="bg-white dark:bg-gray-900 w-full sm:max-w-md h-[80vh] sm:h-[600px] sm:rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+           <h3 className="font-bold dark:text-white">Comments</h3>
+           <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"><X className="w-6 h-6 dark:text-white" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+           {post.comments.length === 0 && (
+               <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                   <MessageCircle className="w-12 h-12 mb-2 opacity-20" />
+                   <p>No comments yet.</p>
+               </div>
+           )}
+           {post.comments.map((c: Comment) => (
+             <div key={c.id} className="flex space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl rounded-tl-none">
+                      <span className="font-bold text-sm dark:text-white block mb-0.5">{c.username}</span>
+                      {editingId === c.id ? (
+                          <div className="flex flex-col space-y-2">
+                             <input 
+                                className="w-full border rounded px-2 py-1 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none"
+                                value={editText}
+                                onChange={e => setEditText(e.target.value)}
+                                autoFocus
+                             />
+                             <div className="flex space-x-2 text-xs">
+                                <button onClick={() => saveEdit(c.id)} className="text-brand-600 font-bold">Save</button>
+                                <button onClick={() => setEditingId(null)} className="text-gray-500">Cancel</button>
+                             </div>
+                          </div>
+                      ) : (
+                          <p className="text-sm dark:text-gray-300 leading-relaxed">{c.text}</p>
+                      )}
+                  </div>
+                  <div className="flex items-center space-x-3 mt-1 ml-1 text-[10px] font-medium text-gray-500">
+                    <span>{new Date(c.timestamp).toLocaleDateString()}</span>
+                    {c.userId === currentUser.id && !editingId && (
+                       <>
+                         <button onClick={() => handleEdit(c)} className="hover:text-gray-900 dark:hover:text-gray-300">Edit</button>
+                         <button onClick={() => onDeleteComment(post.id, c.id)} className="text-red-500 hover:text-red-600">Delete</button>
+                       </>
+                    )}
+                  </div>
+                </div>
+             </div>
+           ))}
+        </div>
+        <form onSubmit={handleSubmit} className="p-3 border-t border-gray-100 dark:border-gray-800 flex space-x-2 bg-white dark:bg-gray-900">
+           <input 
+             type="text" 
+             placeholder="Add a comment..." 
+             className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white transition-shadow"
+             value={text}
+             onChange={e => setText(e.target.value)}
+           />
+           <button 
+             disabled={!text.trim()} 
+             type="submit" 
+             className="text-brand-600 font-bold text-sm px-3 disabled:opacity-50 hover:text-brand-700 transition-colors"
+           >
+               Post
+           </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// 16. ShareModal
+const ShareModal = ({ post, onClose }: { post: Post, onClose: () => void }) => {
+   const [copied, setCopied] = useState(false);
+   const shareUrl = `${window.location.origin}/#/post/${post.id}`;
+
+   const copyToClipboard = () => {
+     navigator.clipboard.writeText(shareUrl);
+     setCopied(true);
+     setTimeout(() => setCopied(false), 2000);
+   };
+
+   return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl transform scale-100">
+        <div className="flex justify-between items-center mb-6">
+           <h3 className="text-lg font-bold dark:text-white">Share to</h3>
+           <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"><X className="w-5 h-5 dark:text-gray-400" /></button>
+        </div>
+        
+        <div className="grid grid-cols-4 gap-4 mb-6">
+           <button className="flex flex-col items-center space-y-2 group">
+              <div className="w-14 h-14 rounded-full bg-[#1877F2] text-white flex items-center justify-center shadow-lg group-active:scale-95 transition-transform"><Facebook className="w-7 h-7" /></div>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Facebook</span>
+           </button>
+           <button className="flex flex-col items-center space-y-2 group">
+              <div className="w-14 h-14 rounded-full bg-[#1DA1F2] text-white flex items-center justify-center shadow-lg group-active:scale-95 transition-transform"><Twitter className="w-7 h-7" /></div>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Twitter</span>
+           </button>
+           <button className="flex flex-col items-center space-y-2 group">
+              <div className="w-14 h-14 rounded-full bg-[#0A66C2] text-white flex items-center justify-center shadow-lg group-active:scale-95 transition-transform"><Linkedin className="w-7 h-7" /></div>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">LinkedIn</span>
+           </button>
+           <button className="flex flex-col items-center space-y-2 group" onClick={copyToClipboard}>
+              <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white flex items-center justify-center shadow-lg group-active:scale-95 transition-transform">
+                  {copied ? <Check className="w-7 h-7 text-green-500" /> : <Link2 className="w-7 h-7" />}
+              </div>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{copied ? 'Copied' : 'Copy'}</span>
+           </button>
+        </div>
+        
+        <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700">
+           <p className="flex-1 text-xs text-gray-500 dark:text-gray-400 truncate mr-3 select-all">{shareUrl}</p>
+           <button onClick={copyToClipboard} className="text-brand-600 font-bold text-xs hover:text-brand-700">
+              {copied ? 'COPIED' : 'COPY'}
+           </button>
+        </div>
+      </div>
+    </div>
+   );
+};
+
+// 17. EditMessageModal
+const EditMessageModal = ({ message, onSave, onCancel }: { message: Message, onSave: (id: string, text: string) => void, onCancel: () => void }) => {
+  const [text, setText] = useState(message.text);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl transform scale-100">
+        <h2 className="text-xl font-bold mb-4 dark:text-white">Edit Message</h2>
+        <textarea 
+          className="w-full p-3 border rounded-xl mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none resize-none" 
+          rows={3} 
+          value={text} 
+          onChange={e => setText(e.target.value)}
+        />
+        <div className="flex justify-end space-x-3">
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button onClick={() => onSave(message.id, text)}>Save</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -1171,7 +1083,7 @@ interface LayoutProps {
 
 const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout }: LayoutProps) => {
   const location = useLocation();
-  const isHideHeader = location.pathname === '/upload' || location.pathname === '/edit-profile' || location.pathname.includes('/profile/') || location.pathname.includes('/post/') || location.pathname === '/login' || location.pathname === '/signup';
+  const isHideHeader = location.pathname === '/upload' || location.pathname === '/edit-profile' || location.pathname.includes('/profile/') || location.pathname.includes('/post/') || location.pathname.includes('/messages/') || location.pathname === '/login' || location.pathname === '/signup';
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black transition-colors duration-200 font-sans">
@@ -1184,13 +1096,18 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout }: Lay
           </Link>
           <div className="flex items-center space-x-3">
              {isAuthenticated ? (
-               <button 
-                 onClick={onLogout} 
-                 className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                 title="Logout"
-               >
-                 <LogOut className="w-5 h-5" />
-               </button>
+               <>
+                 <Link to="/messages" className="text-gray-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                    <MessageSquare className="w-6 h-6" />
+                 </Link>
+                 <button 
+                   onClick={onLogout} 
+                   className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                   title="Logout"
+                 >
+                   <LogOut className="w-5 h-5" />
+                 </button>
+               </>
              ) : (
                <div className="flex items-center space-x-2">
                  <Link to="/login">
@@ -1240,6 +1157,7 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
+  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [currentUser, setCurrentUser] = useState<UserType>(CURRENT_USER);
   const [followingIds, setFollowingIds] = useState<string[]>(['u1', 'u2']); // Mock initial following
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
@@ -1401,8 +1319,47 @@ const App = () => {
   };
 
   const handleShare = (postId: string) => {
-    // Force custom modal to ensure link visibility as requested
     setActiveSharePostId(postId);
+  };
+
+  // Messaging Logic
+  const handleSendMessage = (text: string, receiverId: string) => {
+    const newMessage: Message = {
+      id: `m_${Date.now()}`,
+      senderId: currentUser.id,
+      receiverId: receiverId,
+      text: text,
+      timestamp: Date.now(),
+      isRead: false
+    };
+    setMessages(prev => [...prev, newMessage]);
+
+    // Simulate auto-reply after 2 seconds
+    setTimeout(() => {
+        const replies = [
+          "That sounds great! 👍",
+          "Can you tell me more?",
+          "I'll check it out soon.",
+          "Awesome!",
+          "Haha, totally! 😂"
+        ];
+        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+        
+        const replyMessage: Message = {
+            id: `m_r_${Date.now()}`,
+            senderId: receiverId,
+            receiverId: currentUser.id,
+            text: randomReply,
+            timestamp: Date.now(),
+            isRead: false
+        };
+        setMessages(prev => [...prev, replyMessage]);
+    }, 2000);
+  };
+
+  // Edit Message Logic
+  const handleEditMessage = (id: string, newText: string) => {
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, text: newText, isEdited: true } : m));
   };
 
   return (
@@ -1479,6 +1436,10 @@ const App = () => {
               />
             } 
           />
+          {/* Messaging Routes */}
+          <Route path="/messages" element={<Inbox messages={messages} users={MOCK_USERS} currentUser={currentUser} />} />
+          <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={MOCK_USERS} currentUser={currentUser} onSend={handleSendMessage} onEdit={handleEditMessage} />} />
+          
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/signup" element={<Signup onSignup={handleSignup} />} />
           

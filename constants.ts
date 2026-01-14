@@ -1,4 +1,4 @@
-import { User, Post, Story } from './types';
+import { User, Post, Story, Message } from './types';
 
 export const CURRENT_USER: User = {
   id: 'u_me',
@@ -72,3 +72,38 @@ export const INITIAL_POSTS: Post[] = Array.from({ length: 20 }).map((_, i) => {
     likedByMe: false,
   };
 });
+
+export const INITIAL_MESSAGES: Message[] = [
+  {
+    id: 'm1',
+    senderId: 'u1',
+    receiverId: 'u_me',
+    text: 'Hey Alex! Loved your recent post about the headphones. 🎧',
+    timestamp: Date.now() - 3600000,
+    isRead: true,
+  },
+  {
+    id: 'm2',
+    senderId: 'u_me',
+    receiverId: 'u1',
+    text: 'Thanks Sarah! Yeah, the sound quality is insane for the price.',
+    timestamp: Date.now() - 3500000,
+    isRead: true,
+  },
+  {
+    id: 'm3',
+    senderId: 'u1',
+    receiverId: 'u_me',
+    text: 'Do you have an affiliate link for them? I might grab a pair.',
+    timestamp: Date.now() - 3400000,
+    isRead: false,
+  },
+  {
+    id: 'm4',
+    senderId: 'u2',
+    receiverId: 'u_me',
+    text: 'Collaboration proposal: Check your email! 📧',
+    timestamp: Date.now() - 86400000,
+    isRead: true,
+  }
+];
