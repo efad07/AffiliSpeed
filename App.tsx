@@ -214,19 +214,39 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
     setGeneratingAI(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!preview || !file) return;
     setLoading(true);
 
-    setTimeout(() => {
-      const newPost: Post = {
+    try {
+      // 1. Upload to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'oxh9k9eo');
+      formData.append('cloud_name', 'dgdvvnnnj');
+
+      const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/dgdvvnnnj/auto/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!cloudinaryRes.ok) {
+        throw new Error('Cloudinary upload failed');
+      }
+
+      const cloudinaryData = await cloudinaryRes.json();
+      const secureUrl = cloudinaryData.secure_url;
+      const mediaType = file.type.startsWith('video') ? 'video' : 'image';
+
+      // 2. Create Post Object (Local State Only)
+      const newPostData: Post = {
         id: `p_${Date.now()}`,
         userId: currentUser.id,
         user: currentUser,
-        type: file.type.startsWith('video') ? 'video' : 'image',
-        url: preview,
-        caption,
+        type: mediaType,
+        url: secureUrl,
+        caption: caption,
         affiliateLink: affiliateLink || undefined,
         affiliateLabel: affiliateLabel || undefined,
         likes: 0,
@@ -234,10 +254,17 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
         timestamp: Date.now(),
         likedByMe: false
       };
-      onPost(newPost);
-      setLoading(false);
+
+      // 3. Update Local State
+      onPost(newPostData);
       navigate('/');
-    }, 800);
+      
+    } catch (error) {
+      console.error("Error uploading post:", error);
+      alert("Failed to create post. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -976,10 +1003,15 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout }: any
                     </button>
                     
                     {isAuthenticated ? (
-                        <Link to="/messages" className="p-1.5 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative">
-                            <MessageCircle className="w-6 h-6" />
-                            <span className="absolute top-1 right-0.5 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-black rounded-full"></span>
-                        </Link>
+                        <div className="flex items-center gap-3">
+                            <Link to="/messages" className="p-1.5 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative">
+                                <MessageCircle className="w-6 h-6" />
+                                <span className="absolute top-1 right-0.5 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-black rounded-full"></span>
+                            </Link>
+                            <button onClick={onLogout} className="text-gray-600 dark:text-gray-300 hover:text-red-500">
+                                <LogOut className="w-6 h-6" />
+                            </button>
+                        </div>
                     ) : (
                          <div className="flex items-center space-x-2">
                             <Link to="/login" className={`text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors ${location.pathname === '/login' ? 'bg-gray-100 dark:bg-gray-800 text-brand-600' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
@@ -1082,7 +1114,7 @@ const PostDetail = ({ posts, onLike, onDelete, onEdit, onComment, onShare, curre
             <PostCard 
                 post={post} 
                 onLike={onLike} 
-                onDelete={onDelete}
+                onDelete={onDelete} 
                 onEdit={onEdit}
                 onCommentClick={onComment}
                 onShare={onShare}
@@ -1092,13 +1124,39 @@ const PostDetail = ({ posts, onLike, onDelete, onEdit, onComment, onShare, curre
     );
 };
 
-const Login = ({ onLogin }: any) => {
+const Login = () => {
     const navigate = useNavigate();
-    const handleLogin = (e: React.FormEvent) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        onLogin();
-        navigate('/');
+        setLoading(true);
+        setError('');
+        // Simulate Login
+        setTimeout(() => {
+             // For demo purposes, we accept any login
+             setLoading(false);
+             // Logic handled in parent component or navigation triggered by auth state if we were using real auth
+             // Since we are mocking in App.tsx via simple state, we can't directly set isAuthenticated here 
+             // without prop drilling or context. 
+             // BUT App.tsx doesn't pass a setter.
+             // Wait, App.tsx has no way to know we logged in if we don't pass a setter.
+             // Actually, the previous implementation used Firebase Auth listener.
+             // Let's modify App.tsx to pass a dummy login function or just navigate and let App assume logged in?
+             // No, App checks isAuthenticated state.
+             // Let's rely on the fact that we are in the same file for now in this huge block, 
+             // BUT `Login` is defined outside `App`.
+             // I will refactor `Login` to accept `onLogin` prop in App.tsx render.
+        }, 500);
     };
+
+    // NOTE: In this monolithic file, I need to change how Login is called in Routes
+    // I will return a placeholder here, but the actual logic update is in App component where Login is rendered.
+    // See App component below for the fix.
+    
     return (
         <div className="flex-1 h-full flex flex-col items-center justify-center p-6 bg-white dark:bg-black min-h-[calc(100vh-3.5rem)]">
             <div className="w-full max-w-sm space-y-6">
@@ -1106,10 +1164,26 @@ const Login = ({ onLogin }: any) => {
                     <h1 className="text-3xl font-bold text-brand-600">AffiliSpeed</h1>
                     <p className="text-gray-500">Monetize your influence instantly.</p>
                 </div>
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <input type="email" placeholder="Email" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900" />
-                    <input type="password" placeholder="Password" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900" />
-                    <button type="submit" className="w-full bg-brand-600 text-white p-3 rounded-lg font-bold">Log In</button>
+                <form className="space-y-4">
+                    <input 
+                        type="email" 
+                        placeholder="Email" 
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" 
+                        required
+                    />
+                    <input 
+                        type="password" 
+                        placeholder="Password" 
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" 
+                        required
+                    />
+                    <button type="submit" className="w-full bg-brand-600 text-white p-3 rounded-lg font-bold">
+                        Log In (Mock)
+                    </button>
                 </form>
                 <div className="text-center">
                     <p className="text-sm text-gray-500">Don't have an account? <Link to="/signup" className="text-brand-600 font-semibold">Sign up</Link></p>
@@ -1119,13 +1193,55 @@ const Login = ({ onLogin }: any) => {
     );
 };
 
-const Signup = ({ onSignup }: any) => {
+// Modifying Login/Signup signatures to accept callbacks for the mock state
+const MockLogin = ({ onLogin }: { onLogin: () => void }) => {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setTimeout(() => {
+            onLogin();
+            navigate('/');
+        }, 800);
+    };
+
+    return (
+         <div className="flex-1 h-full flex flex-col items-center justify-center p-6 bg-white dark:bg-black min-h-[calc(100vh-3.5rem)]">
+            <div className="w-full max-w-sm space-y-6">
+                <div className="text-center space-y-2">
+                    <h1 className="text-3xl font-bold text-brand-600">AffiliSpeed</h1>
+                    <p className="text-gray-500">Monetize your influence instantly.</p>
+                </div>
+                <form onSubmit={handleLogin} className="space-y-4">
+                    <input type="email" placeholder="Email" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
+                    <input type="password" placeholder="Password" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
+                    <button type="submit" disabled={loading} className="w-full bg-brand-600 text-white p-3 rounded-lg font-bold">
+                        {loading ? 'Logging in...' : 'Log In'}
+                    </button>
+                </form>
+                <div className="text-center">
+                    <p className="text-sm text-gray-500">Don't have an account? <Link to="/signup" className="text-brand-600 font-semibold">Sign up</Link></p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const MockSignup = ({ onLogin }: { onLogin: () => void }) => {
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+
     const handleSignup = (e: React.FormEvent) => {
         e.preventDefault();
-        onSignup(CURRENT_USER);
-        navigate('/');
+        setLoading(true);
+        setTimeout(() => {
+            onLogin();
+            navigate('/');
+        }, 800);
     };
+
     return (
         <div className="flex-1 h-full flex flex-col items-center justify-center p-6 bg-white dark:bg-black min-h-[calc(100vh-3.5rem)]">
             <div className="w-full max-w-sm space-y-6">
@@ -1134,14 +1250,15 @@ const Signup = ({ onSignup }: any) => {
                     <p className="text-gray-500">Start your affiliate journey.</p>
                 </div>
                 <form onSubmit={handleSignup} className="space-y-4">
-                     <input type="text" placeholder="Full Name" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900" />
-                    <input type="text" placeholder="Username" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900" />
-                    <input type="email" placeholder="Email" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900" />
-                    <input type="password" placeholder="Password" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900" />
-                    <button type="submit" className="w-full bg-brand-600 text-white p-3 rounded-lg font-bold">Sign Up</button>
+                    <input type="text" placeholder="Full Name" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
+                    <input type="email" placeholder="Email" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
+                    <input type="password" placeholder="Password" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
+                    <button type="submit" disabled={loading} className="w-full bg-brand-600 text-white p-3 rounded-lg font-bold">
+                        {loading ? 'Signing Up...' : 'Sign Up'}
+                    </button>
                 </form>
                 <div className="text-center">
-                    <p className="text-sm text-gray-500">Already have an account? <Link to="/login" className="text-brand-600 font-semibold">Log in</Link></p>
+                     <p className="text-sm text-gray-500">Already have an account? <Link to="/login" className="text-brand-600 font-semibold">Log in</Link></p>
                 </div>
             </div>
         </div>
@@ -1250,6 +1367,7 @@ const ShareModal = ({ post, onClose }: any) => {
 const App = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
@@ -1275,6 +1393,15 @@ const App = () => {
     }
   }, [theme]);
 
+  // Auth State Listener (Mock)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        setIsAuthenticated(false); // Default state
+        setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Update Current User Following Count when followingIds changes
   useEffect(() => {
     setCurrentUser(u => ({ 
@@ -1286,16 +1413,8 @@ const App = () => {
 
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
-
-  const handleSignup = (newUser: UserType) => {
-    setCurrentUser(newUser);
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Mock Logout
     setIsAuthenticated(false);
   };
 
@@ -1476,6 +1595,14 @@ const App = () => {
     setMessages(prev => prev.map(m => m.id === id ? { ...m, liked: !m.liked } : m));
   };
 
+  if (isLoading) {
+      return (
+          <div className="flex items-center justify-center h-screen bg-white dark:bg-black text-brand-600">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+          </div>
+      );
+  }
+
   return (
     <Router>
       <Layout theme={theme} toggleTheme={toggleTheme} isAuthenticated={isAuthenticated} onLogout={handleLogout}>
@@ -1509,7 +1636,7 @@ const App = () => {
                 user={currentUser} 
                 posts={posts} 
                 isMe={true} 
-                onDelete={handleDeletePost}
+                onDelete={handleDeletePost} 
                 onEdit={handleEditPost}
               />
             } 
@@ -1567,8 +1694,8 @@ const App = () => {
             } 
           />
           
-          <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route path="/signup" element={<Signup onSignup={handleSignup} />} />
+          <Route path="/login" element={<MockLogin onLogin={() => setIsAuthenticated(true)} />} />
+          <Route path="/signup" element={<MockSignup onLogin={() => setIsAuthenticated(true)} />} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
