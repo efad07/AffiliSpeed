@@ -6,6 +6,7 @@ import { Post, User as UserType, Story, Comment, Message } from './types';
 import PostCard from './components/PostCard';
 import StoryTray from './components/StoryTray';
 import { generateSmartCaption } from './services/geminiService';
+import { supabase } from './services/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // -- Icons & UI Components --
@@ -86,14 +87,29 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: email, 
+        password: password 
+      });
+
+      if (error) {
+        alert(error.message);
+      } else {
+        console.log("Login successful:", data.user?.email);
+        onLogin();
+        navigate('/');
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      alert("An unexpected error occurred during login.");
+    } finally {
       setIsLoading(false);
-      onLogin();
-      navigate('/');
-    }, 1500);
+    }
   };
 
   return (
@@ -166,14 +182,38 @@ const SignupScreen = ({ onSignup }: { onSignup: () => void }) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+
+    try {
+      const { data, error } = await supabase.auth.signUp({ 
+        email: email, 
+        password: password,
+        options: {
+          data: {
+            full_name: name,
+          }
+        }
+      });
+
+      if (error) {
+        alert(error.message);
+      } else {
+        console.log("Sign up successful! Please check your email for verification.");
+        // Note: Supabase defaults to email confirmation. 
+        // If "Enable email confirmation" is on, user needs to verify before login works fully.
+        // For a smoother demo, often developers disable it in dev, or we show a message.
+        alert("Account created! If email verification is enabled, please check your inbox.");
+        onSignup();
+        navigate('/');
+      }
+    } catch (err) {
+       console.error("Unexpected error:", err);
+       alert("An unexpected error occurred during signup.");
+    } finally {
       setIsLoading(false);
-      onSignup();
-      navigate('/');
-    }, 1500);
+    }
   };
 
   return (
@@ -251,7 +291,7 @@ const ForgotPasswordScreen = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
+    // Simulate API call - Supabase has resetPasswordForEmail but needs SMTP setup usually
     setTimeout(() => {
       setIsLoading(false);
       setIsSent(true);
@@ -1357,12 +1397,42 @@ const App = () => {
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Check localStorage to persist login state, default to false so new users see Login screen
-    const savedAuth = localStorage.getItem('isAuth');
-    return savedAuth === 'true';
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [followingIds, setFollowingIds] = useState<string[]>(['u2', 'u3']);
+
+  // Check active session on load
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsAuthenticated(true);
+        // Update current user details from metadata if available
+        if (session.user) {
+             setCurrentUser(prev => ({
+                 ...prev,
+                 id: session.user.id,
+                 name: session.user.user_metadata?.full_name || prev.name,
+                 handle: session.user.email?.split('@')[0] || prev.handle
+             }));
+        }
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+      if (session?.user) {
+           setCurrentUser(prev => ({
+               ...prev,
+               id: session.user.id,
+               name: session.user.user_metadata?.full_name || prev.name,
+               handle: session.user.email?.split('@')[0] || prev.handle
+           }));
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -1374,14 +1444,14 @@ const App = () => {
 
   const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
-    localStorage.removeItem('isAuth');
   };
 
   const handleLogin = () => {
+    // This is now purely for state/navigation updates triggered by the LoginScreen
     setIsAuthenticated(true);
-    localStorage.setItem('isAuth', 'true');
   };
 
   const handleLike = (id: string) => {
@@ -1455,7 +1525,8 @@ const App = () => {
     setFollowingIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
-  const handleSendMessage = (text: string, receiverId: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
+  const handleSendMessage = async (text: string, receiverId: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
+    // 1. Optimistic Update
     const msg: Message = {
       id: `m_${Date.now()}`,
       senderId: currentUser.id,
@@ -1466,7 +1537,29 @@ const App = () => {
       timestamp: Date.now(),
       isRead: false
     };
-    setMessages([...messages, msg]);
+    setMessages(prev => [...prev, msg]);
+
+    // 2. Save to Supabase Database
+    try {
+        const { error } = await supabase
+            .from('messages')
+            .insert([{ 
+                sender_id: currentUser.id,
+                receiver_id: receiverId,
+                text: text,
+                media_url: mediaUrl,
+                media_type: mediaType
+                // timestamp is usually auto-generated by Supabase 'created_at'
+            }]);
+
+        if (error) {
+            console.error("Supabase Database Error:", error.message);
+        } else {
+            console.log("Message saved to Supabase!");
+        }
+    } catch (err) {
+        console.error("Error saving message:", err);
+    }
   };
 
   const handleEditMessage = (id: string, text: string) => {
