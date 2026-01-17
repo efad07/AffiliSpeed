@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap } from 'lucide-react';
 import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS, INITIAL_MESSAGES } from './constants';
 import { Post, User as UserType, Story, Comment, Message } from './types';
 import PostCard from './components/PostCard';
@@ -11,14 +11,316 @@ import { motion, AnimatePresence } from 'framer-motion';
 // -- Icons & UI Components --
 
 const Button = ({ children, onClick, variant = 'primary', className = '', ...props }: any) => {
-  const baseStyle = "px-4 py-2 rounded-lg font-medium transition-all duration-200 active:scale-95 flex items-center justify-center";
+  const baseStyle = "px-6 py-3.5 rounded-xl font-bold transition-all duration-200 active:scale-[0.98] flex items-center justify-center w-full text-sm tracking-wide";
   const variants = {
-    primary: "bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30",
-    secondary: "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600",
-    outline: "border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800",
+    primary: "bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30 ring-1 ring-white/10",
+    secondary: "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700",
+    outline: "border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-brand-500 hover:text-brand-500 dark:hover:border-brand-400 dark:hover:text-brand-400 bg-transparent",
     ghost: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
   };
   return <button className={`${baseStyle} ${variants[variant as keyof typeof variants]} ${className}`} onClick={onClick} {...props}>{children}</button>;
+};
+
+// -- Authentication Components --
+
+const AuthLayout = ({ children, title, subtitle }: { children?: React.ReactNode, title: string, subtitle: string }) => (
+  <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] p-6 transition-colors duration-200 relative overflow-hidden">
+    {/* Decorative Background Elements */}
+    <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand-500/5 blur-[120px] pointer-events-none" />
+    <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-purple-500/5 blur-[100px] pointer-events-none" />
+
+    <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-3xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] dark:shadow-none border border-gray-100 dark:border-gray-800 relative z-10 overflow-hidden">
+      {/* Top Brand Bar */}
+      <div className="h-2 w-full bg-gradient-to-r from-brand-500 to-purple-600" />
+      
+      <div className="px-8 py-10 sm:px-10">
+        <div className="mb-10 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 mb-6 ring-1 ring-brand-100 dark:ring-brand-800">
+            <Zap className="w-7 h-7 fill-current" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">{title}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{subtitle}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+    
+    <div className="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
+      &copy; {new Date().getFullYear()} AffiliSpeed. All rights reserved.
+    </div>
+  </div>
+);
+
+const InputField = ({ label, icon: Icon, type = "text", placeholder, value, onChange, isPassword = false, onTogglePassword }: any) => (
+  <div className="space-y-1.5">
+    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 ml-1 uppercase tracking-wider">{label}</label>
+    <div className="relative group">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-500 transition-colors">
+        <Icon className="h-5 w-5" />
+      </div>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-sm font-medium"
+        placeholder={placeholder}
+        required
+      />
+      {isPassword && (
+        <button
+          type="button"
+          onClick={onTogglePassword}
+          className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+        >
+          {type === "password" ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      onLogin();
+      navigate('/');
+    }, 1500);
+  };
+
+  return (
+    <AuthLayout title="Welcome Back" subtitle="Log in to access your dashboard">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <InputField 
+          label="Email" 
+          icon={Mail} 
+          type="email" 
+          placeholder="name@example.com" 
+          value={email} 
+          onChange={(e: any) => setEmail(e.target.value)} 
+        />
+        
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center ml-1">
+             <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Password</label>
+             <Link to="/forgot-password" className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">
+                Forgot Password?
+             </Link>
+          </div>
+          <div className="relative group">
+             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-500 transition-colors">
+                <Lock className="h-5 w-5" />
+             </div>
+             <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-sm font-medium"
+                placeholder="Enter your password"
+                required
+             />
+             <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+             >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+             </button>
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              "Sign In"
+            )}
+          </Button>
+        </div>
+      </form>
+
+      <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        New to AffiliSpeed?{' '}
+        <Link to="/signup" className="font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">
+          Create an account
+        </Link>
+      </p>
+    </AuthLayout>
+  );
+};
+
+const SignupScreen = ({ onSignup }: { onSignup: () => void }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      onSignup();
+      navigate('/');
+    }, 1500);
+  };
+
+  return (
+    <AuthLayout title="Create Account" subtitle="Join the fastest affiliate community">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <InputField 
+          label="Full Name" 
+          icon={User} 
+          type="text" 
+          placeholder="e.g. Alex Creator" 
+          value={name} 
+          onChange={(e: any) => setName(e.target.value)} 
+        />
+        
+        <InputField 
+          label="Email" 
+          icon={Mail} 
+          type="email" 
+          placeholder="name@example.com" 
+          value={email} 
+          onChange={(e: any) => setEmail(e.target.value)} 
+        />
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 ml-1 uppercase tracking-wider">Password</label>
+          <div className="relative group">
+             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-500 transition-colors">
+                <Lock className="h-5 w-5" />
+             </div>
+             <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-sm font-medium"
+                placeholder="Create a strong password"
+                required
+             />
+             <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+             >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+             </button>
+          </div>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 ml-1">Must be at least 8 characters</p>
+        </div>
+
+        <div className="pt-2">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              "Create Account"
+            )}
+          </Button>
+        </div>
+      </form>
+
+      <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        Already have an account?{' '}
+        <Link to="/login" className="font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">
+          Log in
+        </Link>
+      </p>
+    </AuthLayout>
+  );
+};
+
+const ForgotPasswordScreen = () => {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false);
+      setIsSent(true);
+    }, 2000);
+  };
+
+  if (isSent) {
+    return (
+      <AuthLayout title="Check your email" subtitle={`We sent a link to ${email}`}>
+         <div className="text-center">
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-50 dark:bg-green-900/20 mb-6 text-green-500 ring-1 ring-green-100 dark:ring-green-800"
+            >
+              <MailCheck className="w-10 h-10" />
+            </motion.div>
+            
+            <div className="space-y-3">
+              <Button onClick={() => window.open(`mailto:${email}`)}>
+                Open Email App
+              </Button>
+              
+              <Button onClick={() => setIsSent(false)} variant="ghost">
+                Try another email
+              </Button>
+            </div>
+
+            <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-6">
+              <Link to="/login" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Back to Log In
+              </Link>
+            </div>
+         </div>
+      </AuthLayout>
+    );
+  }
+
+  return (
+    <AuthLayout title="Reset Password" subtitle="Enter your email to get reset instructions">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <InputField 
+          label="Email Address" 
+          icon={Mail} 
+          type="email" 
+          placeholder="name@example.com" 
+          value={email} 
+          onChange={(e: any) => setEmail(e.target.value)} 
+        />
+
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? (
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            "Send Reset Link"
+          )}
+        </Button>
+      </form>
+
+      <div className="mt-8 text-center">
+        <Link to="/login" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Back to Log In
+        </Link>
+      </div>
+    </AuthLayout>
+  );
 };
 
 // -- Pages --
@@ -34,7 +336,7 @@ const Feed = ({
   onShare,
   onAddStory, 
   onDeleteStory, 
-  onEditStory,
+  onEditStory, 
   onReplyToStory,
   currentUser 
 }: { 
@@ -978,11 +1280,11 @@ const NavItem = ({ to, icon: Icon, label, active }: any) => (
 
 const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout }: any) => {
   const location = useLocation();
-  if (!isAuthenticated && !['/login', '/signup'].includes(location.pathname)) {
+  if (!isAuthenticated && !['/login', '/signup', '/forgot-password'].includes(location.pathname)) {
       return <Navigate to="/login" replace />;
   }
 
-  const hideNav = ['/login', '/signup', '/messages/', '/edit-profile', '/upload'].some(path => location.pathname.includes(path));
+  const hideNav = ['/login', '/signup', '/forgot-password', '/messages/', '/edit-profile', '/upload'].some(path => location.pathname.includes(path));
   
   // Logic for Top Header: Show on main tabs AND Login/Signup pages
   const showTopHeader = ['/', '/search', '/shop', '/profile', '/login', '/signup'].includes(location.pathname);
@@ -1049,341 +1351,18 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout }: any
   );
 };
 
-const Profile = ({ user, posts, isMe, onDelete, onEdit }: { user: UserType, posts: Post[], isMe: boolean, onDelete?: (id: string) => void, onEdit?: (post: Post) => void }) => {
-    const userPosts = posts.filter((p: Post) => p.userId === user.id);
-    return (
-        <div className="pb-20">
-             <div className="p-4 flex flex-col items-center">
-                <img src={user.avatar} className="w-24 h-24 rounded-full border-4 border-gray-100 dark:border-gray-800 mb-3 object-cover" />
-                <h1 className="text-xl font-bold dark:text-white">{user.name}</h1>
-                <p className="text-gray-500 text-sm mb-4">@{user.handle}</p>
-                <div className="flex space-x-6 mb-6 text-center">
-                    <Link to="/profile/followers" className="flex flex-col">
-                        <span className="font-bold text-lg dark:text-white">{user.followers}</span>
-                        <span className="text-xs text-gray-500">Followers</span>
-                    </Link>
-                    <Link to="/profile/following" className="flex flex-col">
-                        <span className="font-bold text-lg dark:text-white">{user.following}</span>
-                        <span className="text-xs text-gray-500">Following</span>
-                    </Link>
-                    <div className="flex flex-col">
-                         <span className="font-bold text-lg dark:text-white">{userPosts.length}</span>
-                         <span className="text-xs text-gray-500">Posts</span>
-                    </div>
-                </div>
-                <p className="text-center text-sm mb-6 max-w-xs">{user.bio}</p>
-                
-                {isMe ? (
-                    <div className="flex space-x-2 w-full max-w-xs">
-                        <Link to="/edit-profile" className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg font-semibold text-sm text-center">Edit Profile</Link>
-                        <button className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg font-semibold text-sm">Share Profile</button>
-                    </div>
-                ) : (
-                    <div className="flex space-x-2 w-full max-w-xs">
-                        <button className="flex-1 py-2 bg-brand-600 text-white rounded-lg font-semibold text-sm">Follow</button>
-                        <button className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg font-semibold text-sm">Message</button>
-                    </div>
-                )}
-             </div>
-             
-             {/* Grid */}
-             <div className="grid grid-cols-3 gap-0.5">
-                 {userPosts.map((post: Post) => (
-                     <div key={post.id} className="aspect-square bg-gray-100 dark:bg-gray-800 relative">
-                         <img src={post.url} className="w-full h-full object-cover" />
-                     </div>
-                 ))}
-             </div>
-        </div>
-    )
-};
-
-const PostDetail = ({ posts, onLike, onDelete, onEdit, onComment, onShare, currentUser }: any) => {
-    const { postId } = useParams();
-    const navigate = useNavigate();
-    const post = posts.find((p: Post) => p.id === postId);
-
-    if (!post) return <div>Post not found</div>;
-
-    return (
-        <div className="min-h-screen bg-white dark:bg-black pt-safe-top">
-            <div className="flex items-center px-4 py-3 sticky top-0 bg-white dark:bg-black z-10 border-b border-gray-100 dark:border-gray-800">
-                <button onClick={() => navigate(-1)}><ChevronLeft className="w-6 h-6 dark:text-white" /></button>
-                <h1 className="font-bold text-lg ml-4 dark:text-white">Post</h1>
-            </div>
-            <PostCard 
-                post={post} 
-                onLike={onLike} 
-                onDelete={onDelete} 
-                onEdit={onEdit}
-                onCommentClick={onComment}
-                onShare={onShare}
-                isOwner={post.userId === currentUser.id}
-            />
-        </div>
-    );
-};
-
-const Login = () => {
-    const navigate = useNavigate();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        // Simulate Login
-        setTimeout(() => {
-             // For demo purposes, we accept any login
-             setLoading(false);
-             // Logic handled in parent component or navigation triggered by auth state if we were using real auth
-             // Since we are mocking in App.tsx via simple state, we can't directly set isAuthenticated here 
-             // without prop drilling or context. 
-             // BUT App.tsx doesn't pass a setter.
-             // Wait, App.tsx has no way to know we logged in if we don't pass a setter.
-             // Actually, the previous implementation used Firebase Auth listener.
-             // Let's modify App.tsx to pass a dummy login function or just navigate and let App assume logged in?
-             // No, App checks isAuthenticated state.
-             // Let's rely on the fact that we are in the same file for now in this huge block, 
-             // BUT `Login` is defined outside `App`.
-             // I will refactor `Login` to accept `onLogin` prop in App.tsx render.
-        }, 500);
-    };
-
-    // NOTE: In this monolithic file, I need to change how Login is called in Routes
-    // I will return a placeholder here, but the actual logic update is in App component where Login is rendered.
-    // See App component below for the fix.
-    
-    return (
-        <div className="flex-1 h-full flex flex-col items-center justify-center p-6 bg-white dark:bg-black min-h-[calc(100vh-3.5rem)]">
-            <div className="w-full max-w-sm space-y-6">
-                <div className="text-center space-y-2">
-                    <h1 className="text-3xl font-bold text-brand-600">AffiliSpeed</h1>
-                    <p className="text-gray-500">Monetize your influence instantly.</p>
-                </div>
-                <form className="space-y-4">
-                    <input 
-                        type="email" 
-                        placeholder="Email" 
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" 
-                        required
-                    />
-                    <input 
-                        type="password" 
-                        placeholder="Password" 
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" 
-                        required
-                    />
-                    <button type="submit" className="w-full bg-brand-600 text-white p-3 rounded-lg font-bold">
-                        Log In (Mock)
-                    </button>
-                </form>
-                <div className="text-center">
-                    <p className="text-sm text-gray-500">Don't have an account? <Link to="/signup" className="text-brand-600 font-semibold">Sign up</Link></p>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Modifying Login/Signup signatures to accept callbacks for the mock state
-const MockLogin = ({ onLogin }: { onLogin: () => void }) => {
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setTimeout(() => {
-            onLogin();
-            navigate('/');
-        }, 800);
-    };
-
-    return (
-         <div className="flex-1 h-full flex flex-col items-center justify-center p-6 bg-white dark:bg-black min-h-[calc(100vh-3.5rem)]">
-            <div className="w-full max-w-sm space-y-6">
-                <div className="text-center space-y-2">
-                    <h1 className="text-3xl font-bold text-brand-600">AffiliSpeed</h1>
-                    <p className="text-gray-500">Monetize your influence instantly.</p>
-                </div>
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <input type="email" placeholder="Email" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
-                    <input type="password" placeholder="Password" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
-                    <button type="submit" disabled={loading} className="w-full bg-brand-600 text-white p-3 rounded-lg font-bold">
-                        {loading ? 'Logging in...' : 'Log In'}
-                    </button>
-                </form>
-                <div className="text-center">
-                    <p className="text-sm text-gray-500">Don't have an account? <Link to="/signup" className="text-brand-600 font-semibold">Sign up</Link></p>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const MockSignup = ({ onLogin }: { onLogin: () => void }) => {
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-
-    const handleSignup = (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setTimeout(() => {
-            onLogin();
-            navigate('/');
-        }, 800);
-    };
-
-    return (
-        <div className="flex-1 h-full flex flex-col items-center justify-center p-6 bg-white dark:bg-black min-h-[calc(100vh-3.5rem)]">
-            <div className="w-full max-w-sm space-y-6">
-                <div className="text-center space-y-2">
-                    <h1 className="text-3xl font-bold text-brand-600">Join AffiliSpeed</h1>
-                    <p className="text-gray-500">Start your affiliate journey.</p>
-                </div>
-                <form onSubmit={handleSignup} className="space-y-4">
-                    <input type="text" placeholder="Full Name" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
-                    <input type="email" placeholder="Email" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
-                    <input type="password" placeholder="Password" className="w-full p-3 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white" required />
-                    <button type="submit" disabled={loading} className="w-full bg-brand-600 text-white p-3 rounded-lg font-bold">
-                        {loading ? 'Signing Up...' : 'Sign Up'}
-                    </button>
-                </form>
-                <div className="text-center">
-                     <p className="text-sm text-gray-500">Already have an account? <Link to="/login" className="text-brand-600 font-semibold">Log in</Link></p>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const EditPostModal = ({ post, onSave, onCancel }: any) => {
-    const [caption, setCaption] = useState(post.caption);
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm p-4 space-y-4">
-                <h3 className="font-bold dark:text-white">Edit Post</h3>
-                <textarea 
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    value={caption}
-                    onChange={e => setCaption(e.target.value)}
-                />
-                <div className="flex justify-end space-x-2">
-                    <button onClick={onCancel} className="px-4 py-2 text-gray-500">Cancel</button>
-                    <button onClick={() => onSave({...post, caption})} className="px-4 py-2 bg-brand-600 text-white rounded">Save</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const CommentsModal = ({ post, currentUser, onClose, onAddComment, onDeleteComment, onEditComment }: any) => {
-    const [text, setText] = useState('');
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (text.trim()) {
-            onAddComment(post.id, text);
-            setText('');
-        }
-    };
-    return (
-         <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center bg-black/50">
-             <div className="bg-white dark:bg-gray-900 sm:rounded-xl w-full sm:max-w-md sm:mx-auto h-[80vh] sm:h-[600px] flex flex-col shadow-2xl overflow-hidden rounded-t-2xl">
-                 <div className="p-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                     <h3 className="font-bold mx-auto dark:text-white">Comments</h3>
-                     <button onClick={onClose} className="absolute right-3"><X className="w-6 h-6 dark:text-white" /></button>
-                 </div>
-                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                     {post.comments.length === 0 && <p className="text-center text-gray-500">No comments yet.</p>}
-                     {post.comments.map((comment: Comment) => (
-                         <div key={comment.id} className="flex space-x-3">
-                             <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0"></div>
-                             <div className="flex-1">
-                                 <p className="text-sm dark:text-white"><span className="font-bold mr-1">{comment.username}</span>{comment.text}</p>
-                             </div>
-                             {comment.userId === currentUser.id && (
-                                 <button onClick={() => onDeleteComment(post.id, comment.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                             )}
-                         </div>
-                     ))}
-                 </div>
-                 <form onSubmit={handleSubmit} className="p-3 border-t border-gray-100 dark:border-gray-800 flex items-center space-x-2">
-                     <img src={currentUser.avatar} className="w-8 h-8 rounded-full" />
-                     <input 
-                        type="text" 
-                        placeholder="Add a comment..." 
-                        className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm dark:text-white outline-none" 
-                        value={text}
-                        onChange={e => setText(e.target.value)}
-                     />
-                     <button type="submit" disabled={!text.trim()} className="text-brand-600 font-semibold disabled:opacity-50">Post</button>
-                 </form>
-             </div>
-         </div>
-    );
-};
-
-const ShareModal = ({ post, onClose }: any) => {
-    return (
-         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-             <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm p-4">
-                 <div className="flex justify-between items-center mb-4">
-                     <h3 className="font-bold dark:text-white">Share to...</h3>
-                     <button onClick={onClose}><X className="w-5 h-5 dark:text-white" /></button>
-                 </div>
-                 <div className="grid grid-cols-4 gap-4">
-                     <div className="flex flex-col items-center space-y-2">
-                         <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white"><Link2 className="w-6 h-6"/></div>
-                         <span className="text-xs dark:text-gray-300">Copy Link</span>
-                     </div>
-                     <div className="flex flex-col items-center space-y-2">
-                         <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white"><MessageCircle className="w-6 h-6"/></div>
-                         <span className="text-xs dark:text-gray-300">WhatsApp</span>
-                     </div>
-                      <div className="flex flex-col items-center space-y-2">
-                         <div className="w-12 h-12 bg-sky-500 rounded-full flex items-center justify-center text-white"><Twitter className="w-6 h-6"/></div>
-                         <span className="text-xs dark:text-gray-300">Twitter</span>
-                     </div>
-                      <div className="flex flex-col items-center space-y-2">
-                         <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white"><Facebook className="w-6 h-6"/></div>
-                         <span className="text-xs dark:text-gray-300">Facebook</span>
-                     </div>
-                 </div>
-             </div>
-         </div>
-    );
-};
-
-// -- Main App Component --
-
 const App = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [theme, setTheme] = useState('light');
+  const [currentUser, setCurrentUser] = useState<UserType>(CURRENT_USER);
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
-  const [currentUser, setCurrentUser] = useState<UserType>(CURRENT_USER);
-  const [followingIds, setFollowingIds] = useState<string[]>(['u1', 'u2']); // Mock initial following
-  const [postToDelete, setPostToDelete] = useState<string | null>(null);
-  const [postToEdit, setPostToEdit] = useState<Post | null>(null);
-  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
-  const [activeSharePostId, setActiveSharePostId] = useState<string | null>(null);
-
-  // Initialize Theme
-  useEffect(() => {
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
-    }
-  }, []);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check localStorage to persist login state, default to false so new users see Login screen
+    const savedAuth = localStorage.getItem('isAuth');
+    return savedAuth === 'true';
+  });
+  const [followingIds, setFollowingIds] = useState<string[]>(['u2', 'u3']);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -1393,374 +1372,153 @@ const App = () => {
     }
   }, [theme]);
 
-  // Auth State Listener (Mock)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-        setIsAuthenticated(false); // Default state
-        setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Update Current User Following Count when followingIds changes
-  useEffect(() => {
-    setCurrentUser(u => ({ 
-      ...u, 
-      following: followingIds.length,
-      followers: MOCK_USERS.length // Since MOCK_USERS are the followers in this demo
-    }));
-  }, [followingIds]);
-
-  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
-
-  const handleLogout = async () => {
-    // Mock Logout
+  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
+  
+  const handleLogout = () => {
     setIsAuthenticated(false);
+    localStorage.removeItem('isAuth');
+  };
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('isAuth', 'true');
   };
 
   const handleLike = (id: string) => {
-    setPosts(prev => prev.map(p => {
-      if (p.id === id) {
-        return { 
-          ...p, 
-          likedByMe: !p.likedByMe, 
-          likes: p.likedByMe ? p.likes - 1 : p.likes + 1 
-        };
-      }
-      return p;
-    }));
+    setPosts(posts.map(p => p.id === id ? { ...p, likes: p.likedByMe ? p.likes - 1 : p.likes + 1, likedByMe: !p.likedByMe } : p));
   };
 
-  const handleCreatePost = (newPost: Post) => {
-    setPosts(prev => [newPost, ...prev]);
+  const handleDelete = (id: string) => {
+    setPosts(posts.filter(p => p.id !== id));
+  };
+
+  const handleEdit = (post: Post) => {
+    // Basic prompt implementation for edit
+    const newCaption = prompt("Edit caption:", post.caption);
+    if (newCaption !== null) {
+        setPosts(posts.map(p => p.id === post.id ? { ...p, caption: newCaption } : p));
+    }
+  };
+
+  const handleComment = (id: string) => {
+    console.log("Comment on post", id);
+  };
+
+  const handleShare = (id: string) => {
+    console.log("Share post", id);
+  };
+
+  const handlePost = (post: Post) => {
+    setPosts([post, ...posts]);
   };
 
   const handleAddStory = (file: File, caption: string, link?: string, label?: string) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (e.target?.result) {
-        const newStory: Story = {
-          id: `s_${Date.now()}`,
-          userId: currentUser.id,
-          user: currentUser,
-          mediaUrl: e.target.result as string,
-          type: file.type.startsWith('video') ? 'video' : 'image',
-          caption: caption,
-          affiliateLink: link,
-          affiliateLabel: label,
-          expiresAt: Date.now() + 86400000,
-          viewed: false
-        };
-        setStories(prev => [newStory, ...prev]);
-      }
+      const story: Story = {
+        id: `s_${Date.now()}`,
+        userId: currentUser.id,
+        user: currentUser,
+        mediaUrl: e.target?.result as string,
+        type: file.type.startsWith('video') ? 'video' : 'image',
+        caption,
+        affiliateLink: link,
+        affiliateLabel: label,
+        expiresAt: Date.now() + 86400000,
+        viewed: false
+      };
+      setStories([story, ...stories]);
     };
     reader.readAsDataURL(file);
   };
 
-  const handleDeletePost = (id: string) => {
-    setPostToDelete(id);
-  };
-
-  const confirmDeletePost = () => {
-    if (postToDelete) {
-      setPosts(prev => prev.filter(p => p.id !== postToDelete));
-      setPostToDelete(null);
-    }
-  };
-
-  const handleEditPost = (post: Post) => {
-    setPostToEdit(post);
-  };
-
-  const confirmEditPost = (updatedPost: Post) => {
-    setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
-    setPostToEdit(null);
-  };
-
   const handleDeleteStory = (id: string) => {
-    setStories(prev => prev.filter(s => s.id !== id));
+    setStories(stories.filter(s => s.id !== id));
   };
 
   const handleEditStory = (id: string, caption: string) => {
-    setStories(prev => prev.map(s => s.id === id ? { ...s, caption } : s));
+    setStories(stories.map(s => s.id === id ? { ...s, caption } : s));
+  };
+  
+  const handleReplyStory = (storyId: string, text: string) => {
+      const story = stories.find(s => s.id === storyId);
+      if (story) {
+        handleSendMessage(`Replied to story: ${text}`, story.userId);
+      }
+  };
+
+  const handleUpdateUser = (user: UserType) => {
+    setCurrentUser(user);
   };
 
   const handleToggleFollow = (id: string) => {
-    setFollowingIds(prev => 
-      prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
-    );
+    setFollowingIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
-  const handleAddComment = (postId: string, text: string) => {
-    const newComment: Comment = {
-        id: `c_${Date.now()}`,
-        userId: currentUser.id,
-        username: currentUser.handle,
-        text: text,
-        timestamp: Date.now()
-    };
-    
-    setPosts(prev => prev.map(p => {
-        if (p.id === postId) {
-            return { ...p, comments: [...p.comments, newComment] };
-        }
-        return p;
-    }));
-  };
-
-  const handleDeleteComment = (postId: string, commentId: string) => {
-    setPosts(prev => prev.map(p => {
-        if (p.id === postId) {
-            return {
-                ...p,
-                comments: p.comments.filter(c => c.id !== commentId)
-            };
-        }
-        return p;
-    }));
-  };
-
-  const handleEditComment = (postId: string, commentId: string, newText: string) => {
-    setPosts(prev => prev.map(p => {
-        if (p.id === postId) {
-            return {
-                ...p,
-                comments: p.comments.map(c => c.id === commentId ? { ...c, text: newText } : c)
-            };
-        }
-        return p;
-    }));
-  };
-
-  const handleShare = (postId: string) => {
-    setActiveSharePostId(postId);
-  };
-
-  // Messaging Logic
   const handleSendMessage = (text: string, receiverId: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
-    const newMessage: Message = {
+    const msg: Message = {
       id: `m_${Date.now()}`,
       senderId: currentUser.id,
-      receiverId: receiverId,
-      text: text,
-      mediaUrl: mediaUrl,
-      mediaType: mediaType,
+      receiverId,
+      text,
+      mediaUrl,
+      mediaType,
       timestamp: Date.now(),
       isRead: false
     };
-    setMessages(prev => [...prev, newMessage]);
-
-    // Simulate auto-reply after 2 seconds
-    if (!mediaUrl) { // Only auto-reply if it's text for better flow
-      setTimeout(() => {
-          const replies = [
-            "That sounds great! 👍",
-            "Can you tell me more?",
-            "I'll check it out soon.",
-            "Awesome!",
-            "Haha, totally! 😂"
-          ];
-          const randomReply = replies[Math.floor(Math.random() * replies.length)];
-          
-          const replyMessage: Message = {
-              id: `m_r_${Date.now()}`,
-              senderId: receiverId,
-              receiverId: currentUser.id,
-              text: randomReply,
-              timestamp: Date.now(),
-              isRead: false
-          };
-          setMessages(prev => [...prev, replyMessage]);
-      }, 2000);
-    }
+    setMessages([...messages, msg]);
   };
 
-  // Reply to Story Logic
-  const handleReplyToStory = (storyId: string, text: string) => {
-    const story = stories.find(s => s.id === storyId);
-    if (!story) return;
-
-    // In a real app, you might want to attach a reference to the story
-    const replyText = `Replied to story: ${text}`;
-    handleSendMessage(replyText, story.userId);
+  const handleEditMessage = (id: string, text: string) => {
+    setMessages(messages.map(m => m.id === id ? { ...m, text, isEdited: true } : m));
   };
 
-  // Edit Message Logic
-  const handleEditMessage = (id: string, newText: string) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, text: newText, isEdited: true } : m));
-  };
-
-  // Like Message Logic (Double Tap)
   const handleToggleLikeMessage = (id: string) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, liked: !m.liked } : m));
+    setMessages(messages.map(m => m.id === id ? { ...m, liked: !m.liked } : m));
   };
-
-  if (isLoading) {
-      return (
-          <div className="flex items-center justify-center h-screen bg-white dark:bg-black text-brand-600">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
-          </div>
-      );
-  }
 
   return (
     <Router>
       <Layout theme={theme} toggleTheme={toggleTheme} isAuthenticated={isAuthenticated} onLogout={handleLogout}>
         <Routes>
-          <Route 
-            path="/" 
-            element={
-              <Feed 
-                posts={posts} 
-                stories={stories} 
-                onLike={handleLike} 
-                onDelete={handleDeletePost}
-                onEdit={handleEditPost}
-                onComment={(id) => setActiveCommentPostId(id)}
-                onShare={handleShare}
-                onAddStory={handleAddStory}
-                onDeleteStory={handleDeleteStory}
-                onEditStory={handleEditStory}
-                onReplyToStory={handleReplyToStory}
-                currentUser={currentUser} 
-              />
-            } 
-          />
+          <Route path="/login" element={<LoginScreen onLogin={handleLogin} />} />
+          <Route path="/signup" element={<SignupScreen onSignup={handleLogin} />} />
+          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+          <Route path="/" element={<Feed posts={posts} stories={stories} onLike={handleLike} onDelete={handleDelete} onEdit={handleEdit} onComment={handleComment} onShare={handleShare} onAddStory={handleAddStory} onDeleteStory={handleDeleteStory} onEditStory={handleEditStory} onReplyToStory={handleReplyStory} currentUser={currentUser} />} />
           <Route path="/search" element={<Explore posts={posts} />} />
           <Route path="/shop" element={<Shop posts={posts} />} />
-          <Route path="/upload" element={<Upload onPost={handleCreatePost} currentUser={currentUser} />} />
-          <Route 
-            path="/profile" 
-            element={
-              <Profile 
-                user={currentUser} 
-                posts={posts} 
-                isMe={true} 
-                onDelete={handleDeletePost} 
-                onEdit={handleEditPost}
-              />
-            } 
-          />
-          <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={setCurrentUser} />} />
-          <Route 
-            path="/post/:postId" 
-            element={
-              <PostDetail 
-                 posts={posts} 
-                 onLike={handleLike} 
-                 onDelete={handleDeletePost} 
-                 onEdit={handleEditPost} 
-                 onComment={(id) => setActiveCommentPostId(id)}
-                 onShare={handleShare}
-                 currentUser={currentUser}
-              />
-            } 
-          />
-          <Route 
-            path="/profile/followers" 
-            element={
-              <NetworkList 
-                title="Followers" 
-                users={MOCK_USERS} 
-                followingIds={followingIds}
-                onToggleFollow={handleToggleFollow}
-              />
-            } 
-          />
-          <Route 
-            path="/profile/following" 
-            element={
-              <NetworkList 
-                title="Following" 
-                users={MOCK_USERS.filter(u => followingIds.includes(u.id))} 
-                followingIds={followingIds}
-                onToggleFollow={handleToggleFollow}
-              />
-            } 
-          />
-          {/* Messaging Routes */}
+          <Route path="/upload" element={<Upload onPost={handlePost} currentUser={currentUser} />} />
+          <Route path="/profile" element={
+             <div className="max-w-xl mx-auto pb-20 px-4">
+                <div className="flex flex-col items-center pt-6">
+                    <img src={currentUser.avatar} className="w-24 h-24 rounded-full object-cover mb-2 border-4 border-gray-100 dark:border-gray-800" />
+                    <h2 className="text-xl font-bold dark:text-white">{currentUser.name}</h2>
+                    <p className="text-gray-500">@{currentUser.handle}</p>
+                    <p className="text-center mt-2 px-6 dark:text-gray-300">{currentUser.bio}</p>
+                    <div className="flex space-x-6 mt-4 mb-6">
+                        <Link to="/profile/followers" className="text-center"><div className="font-bold dark:text-white">{currentUser.followers}</div><div className="text-xs text-gray-500">Followers</div></Link>
+                        <Link to="/profile/following" className="text-center"><div className="font-bold dark:text-white">{currentUser.following}</div><div className="text-xs text-gray-500">Following</div></Link>
+                    </div>
+                    <div className="flex space-x-2 mb-8">
+                        <Link to="/edit-profile" className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Edit Profile</Link>
+                        <button className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Share Profile</button>
+                    </div>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                    {posts.filter(p => p.userId === currentUser.id).map(p => (
+                        <div key={p.id} className="aspect-square bg-gray-100 dark:bg-gray-800 relative"><img src={p.url} className="w-full h-full object-cover" /></div>
+                    ))}
+                </div>
+             </div>
+          } />
+          <Route path="/profile/:id" element={<div className="p-10 text-center dark:text-white">User Profile Placeholder</div>} />
+          <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateUser} />} />
+          <Route path="/profile/followers" element={<NetworkList title="Followers" users={MOCK_USERS} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
+          <Route path="/profile/following" element={<NetworkList title="Following" users={MOCK_USERS.filter(u => followingIds.includes(u.id))} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
           <Route path="/messages" element={<Inbox messages={messages} users={MOCK_USERS} currentUser={currentUser} />} />
-          <Route 
-            path="/messages/:userId" 
-            element={
-              <ChatRoom 
-                 messages={messages} 
-                 users={MOCK_USERS} 
-                 currentUser={currentUser} 
-                 onSend={handleSendMessage} 
-                 onEdit={handleEditMessage} 
-                 onToggleLike={handleToggleLikeMessage}
-              />
-            } 
-          />
-          
-          <Route path="/login" element={<MockLogin onLogin={() => setIsAuthenticated(true)} />} />
-          <Route path="/signup" element={<MockSignup onLogin={() => setIsAuthenticated(true)} />} />
-          
+          <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={MOCK_USERS} currentUser={currentUser} onSend={handleSendMessage} onEdit={handleEditMessage} onToggleLike={handleToggleLikeMessage} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-
-        {/* Global Edit Modal */}
-        {postToEdit && (
-           <EditPostModal 
-             post={postToEdit} 
-             onSave={confirmEditPost} 
-             onCancel={() => setPostToEdit(null)} 
-           />
-        )}
-
-        {/* Comments Modal */}
-        {activeCommentPostId && (
-            <CommentsModal 
-              post={posts.find(p => p.id === activeCommentPostId)!}
-              currentUser={currentUser}
-              onClose={() => setActiveCommentPostId(null)}
-              onAddComment={handleAddComment}
-              onDeleteComment={handleDeleteComment}
-              onEditComment={handleEditComment}
-            />
-        )}
-
-        {/* Share Modal */}
-        {activeSharePostId && (
-            <ShareModal 
-              post={posts.find(p => p.id === activeSharePostId)!}
-              onClose={() => setActiveSharePostId(null)}
-            />
-        )}
-
-        {/* Global Delete Confirmation Modal */}
-        {postToDelete && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-xs shadow-2xl transform scale-100 animate-in fade-in zoom-in duration-200">
-                  <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600">
-                        <Trash2 className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Post?</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Are you sure you want to delete this post? This action cannot be undone.
-                      </p>
-                    </div>
-                    <div className="flex space-x-3 w-full">
-                        <button 
-                          onClick={() => setPostToDelete(null)}
-                          className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700"
-                        >
-                          Cancel
-                        </button>
-                        <button 
-                          onClick={confirmDeletePost}
-                          className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 shadow-lg shadow-red-500/30"
-                        >
-                          Delete
-                        </button>
-                    </div>
-                  </div>
-              </div>
-            </div>
-        )}
       </Layout>
     </Router>
   );
