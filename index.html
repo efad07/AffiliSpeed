@@ -7,6 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
+      // Critical Fix: Define process globally before any module loads
+      // This prevents the app from crashing when Gemini SDK tries to read process.env
+      window.process = {
+        env: {
+          NODE_ENV: 'production'
+        }
+      };
+      
       tailwind.config = {
         darkMode: 'class',
         theme: {
@@ -44,7 +52,7 @@
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^6.22.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "framer-motion": "https://esm.sh/framer-motion@^12.25.0",
