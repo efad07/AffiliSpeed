@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe } from 'lucide-react';
 import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS, INITIAL_MESSAGES } from './constants';
 import { Post, User as UserType, Story, Comment, Message } from './types';
 import PostCard from './components/PostCard';
@@ -20,6 +20,124 @@ const Button = ({ children, onClick, variant = 'primary', className = '', ...pro
     ghost: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
   };
   return <button className={`${baseStyle} ${variants[variant as keyof typeof variants]} ${className}`} onClick={onClick} {...props}>{children}</button>;
+};
+
+// -- Share Modal Component --
+
+const ShareSheet = ({ isOpen, onClose, user }: { isOpen: boolean; onClose: () => void; user: UserType }) => {
+  const [copied, setCopied] = useState(false);
+  
+  if (!isOpen) return null;
+
+  const profileUrl = `${window.location.origin}/#/profile/${user.id}`;
+  const shareText = `Check out ${user.name} (@${user.handle}) on AffiliSpeed! 🔥`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(profileUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `AffiliSpeed - ${user.name}`,
+          text: shareText,
+          url: profileUrl,
+        });
+        onClose();
+      } catch (error) {
+        console.log('Error sharing:', error);
+      }
+    } else {
+      alert('Native sharing is not supported on this device. Please use the buttons below.');
+    }
+  };
+
+  const socialLinks = [
+    {
+      name: 'WhatsApp',
+      icon: <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center text-white"><MessageCircle className="w-6 h-6" /></div>,
+      url: `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + profileUrl)}`
+    },
+    {
+      name: 'Facebook',
+      icon: <div className="w-12 h-12 rounded-full bg-[#1877F2] flex items-center justify-center text-white"><Facebook className="w-6 h-6" /></div>,
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}`
+    },
+    {
+      name: 'Twitter/X',
+      icon: <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center text-white"><Twitter className="w-6 h-6" /></div>,
+      url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(profileUrl)}`
+    },
+    {
+      name: 'LinkedIn',
+      icon: <div className="w-12 h-12 rounded-full bg-[#0A66C2] flex items-center justify-center text-white"><Linkedin className="w-6 h-6" /></div>,
+      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(profileUrl)}`
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-none">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
+      <motion.div 
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-6 relative z-10 pointer-events-auto shadow-2xl border-t border-gray-100 dark:border-gray-800"
+      >
+        <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-6 sm:hidden" />
+        
+        <div className="text-center mb-6">
+          <h3 className="text-xl font-bold dark:text-white mb-2">Share Profile</h3>
+          <div className="flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+             <img src={user.avatar} className="w-16 h-16 rounded-full object-cover mb-2 ring-2 ring-white dark:ring-gray-600" />
+             <p className="font-semibold text-gray-900 dark:text-white">{user.name}</p>
+             <p className="text-xs text-gray-500">@{user.handle}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          {socialLinks.map((link) => (
+            <a 
+              key={link.name}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center space-y-2 group"
+              onClick={onClose}
+            >
+              <div className="transform group-hover:scale-110 transition-transform duration-200 shadow-sm">
+                {link.icon}
+              </div>
+              <span className="text-[10px] text-gray-500 font-medium">{link.name}</span>
+            </a>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 p-1.5 pl-4 rounded-xl">
+             <div className="flex-1 truncate text-xs text-gray-500">{profileUrl}</div>
+             <button 
+               onClick={handleCopy}
+               className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${copied ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'}`}
+             >
+               {copied ? 'Copied!' : 'Copy'}
+             </button>
+          </div>
+
+          <button 
+            onClick={handleNativeShare}
+            className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-sm flex items-center justify-center space-x-2 transition-colors"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>More Options</span>
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
 };
 
 // -- Authentication Components --
@@ -1311,6 +1429,44 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
 
 // -- Newly Implemented Missing Components --
 
+const UserProfile = ({ currentUser, posts }: { currentUser: UserType, posts: Post[] }) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const viewedUser = MOCK_USERS.find(u => u.id === id) || (id === currentUser.id ? currentUser : null);
+
+  if (!viewedUser) return <div className="p-10 text-center dark:text-white">User not found</div>;
+
+  return (
+    <div className="max-w-xl mx-auto pb-20 px-4">
+       <div className="flex items-center pt-4 mb-2">
+          <button onClick={() => navigate(-1)} className="mr-3 text-gray-900 dark:text-white">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <h1 className="font-bold text-lg dark:text-white">{viewedUser.handle}</h1>
+       </div>
+       <div className="flex flex-col items-center pt-2">
+          <img src={viewedUser.avatar} className="w-24 h-24 rounded-full object-cover mb-2 border-4 border-gray-100 dark:border-gray-800" />
+          <h2 className="text-xl font-bold dark:text-white">{viewedUser.name}</h2>
+          <p className="text-gray-500">@{viewedUser.handle}</p>
+          <p className="text-center mt-2 px-6 dark:text-gray-300">{viewedUser.bio}</p>
+          <div className="flex space-x-6 mt-4 mb-6">
+              <div className="text-center"><div className="font-bold dark:text-white">{viewedUser.followers}</div><div className="text-xs text-gray-500">Followers</div></div>
+              <div className="text-center"><div className="font-bold dark:text-white">{viewedUser.following}</div><div className="text-xs text-gray-500">Following</div></div>
+          </div>
+          <div className="flex space-x-2 mb-8">
+              <button className="px-6 py-2 bg-brand-600 text-white rounded-lg font-semibold text-sm shadow-lg shadow-brand-500/20">Follow</button>
+              <button className="px-6 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Message</button>
+          </div>
+      </div>
+      <div className="grid grid-cols-3 gap-1">
+          {posts.filter(p => p.userId === viewedUser.id).map(p => (
+              <div key={p.id} className="aspect-square bg-gray-100 dark:bg-gray-800 relative"><img src={p.url} className="w-full h-full object-cover" /></div>
+          ))}
+      </div>
+    </div>
+  );
+};
+
 const NavItem = ({ to, icon: Icon, label, active }: any) => (
   <Link to={to} className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${active ? 'text-brand-600 dark:text-brand-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
     <Icon className={`w-6 h-6 ${active ? 'fill-current' : ''}`} />
@@ -1318,8 +1474,17 @@ const NavItem = ({ to, icon: Icon, label, active }: any) => (
   </Link>
 );
 
-const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout }: any) => {
+const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout, isAuthChecking }: any) => {
   const location = useLocation();
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated && !['/login', '/signup', '/forgot-password'].includes(location.pathname)) {
       return <Navigate to="/login" replace />;
   }
@@ -1350,9 +1515,7 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout }: any
                                 <MessageCircle className="w-6 h-6" />
                                 <span className="absolute top-1 right-0.5 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-black rounded-full"></span>
                             </Link>
-                            <button onClick={onLogout} className="text-gray-600 dark:text-gray-300 hover:text-red-500">
-                                <LogOut className="w-6 h-6" />
-                            </button>
+                            {/* Logout button removed from here */}
                         </div>
                     ) : (
                          <div className="flex items-center space-x-2">
@@ -1398,37 +1561,87 @@ const App = () => {
   const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [followingIds, setFollowingIds] = useState<string[]>(['u2', 'u3']);
+  const [showShareSheet, setShowShareSheet] = useState(false);
 
   // Check active session on load
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setIsAuthenticated(true);
-        // Update current user details from metadata if available
-        if (session.user) {
-             setCurrentUser(prev => ({
-                 ...prev,
-                 id: session.user.id,
-                 name: session.user.user_metadata?.full_name || prev.name,
-                 handle: session.user.email?.split('@')[0] || prev.handle
-             }));
+    const fetchProfileData = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*') // Select all columns: full_name, avatar_url, bio, username/handle
+                .eq('id', userId)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Error fetching profile:", error);
+                return null;
+            }
+
+            if (data) {
+                return {
+                    name: data.full_name || data.name,
+                    // Map 'avatar_url' from DB to 'avatar' in our app state
+                    avatar: data.avatar_url, 
+                    bio: data.bio,
+                    handle: data.username || data.handle
+                };
+            }
+        } catch (err) {
+            console.error("Unexpected error fetching profile:", err);
         }
+        return null;
+    };
+
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setIsAuthenticated(true);
+          
+          // Fetch additional profile data from the 'profiles' table
+          const profileData = session.user ? await fetchProfileData(session.user.id) : null;
+
+          if (session.user) {
+               setCurrentUser(prev => ({
+                   ...prev,
+                   id: session.user.id,
+                   // Prioritize DB data -> Metadata -> Default/Previous
+                   name: profileData?.name || session.user.user_metadata?.full_name || prev.name,
+                   handle: profileData?.handle || session.user.email?.split('@')[0] || prev.handle,
+                   avatar: profileData?.avatar || prev.avatar,
+                   bio: profileData?.bio || prev.bio
+               }));
+          }
+        }
+      } catch (error) {
+        console.error("Session check failed", error);
+      } finally {
+        setIsAuthChecking(false);
       }
-    });
+    };
+
+    checkSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setIsAuthenticated(!!session);
       if (session?.user) {
+           const profileData = await fetchProfileData(session.user.id);
+           
            setCurrentUser(prev => ({
                ...prev,
                id: session.user.id,
-               name: session.user.user_metadata?.full_name || prev.name,
-               handle: session.user.email?.split('@')[0] || prev.handle
+               name: profileData?.name || session.user.user_metadata?.full_name || prev.name,
+               handle: profileData?.handle || session.user.email?.split('@')[0] || prev.handle,
+               avatar: profileData?.avatar || prev.avatar,
+               bio: profileData?.bio || prev.bio
            }));
       }
+      setIsAuthChecking(false);
     });
 
     return () => subscription.unsubscribe();
@@ -1442,8 +1655,10 @@ const App = () => {
     }
   }, [theme]);
 
-  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
-  
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthenticated(false);
@@ -1572,7 +1787,7 @@ const App = () => {
 
   return (
     <Router>
-      <Layout theme={theme} toggleTheme={toggleTheme} isAuthenticated={isAuthenticated} onLogout={handleLogout}>
+      <Layout theme={theme} toggleTheme={toggleTheme} isAuthenticated={isAuthenticated} onLogout={handleLogout} isAuthChecking={isAuthChecking}>
         <Routes>
           <Route path="/login" element={<LoginScreen onLogin={handleLogin} />} />
           <Route path="/signup" element={<SignupScreen onSignup={handleLogin} />} />
@@ -1583,7 +1798,16 @@ const App = () => {
           <Route path="/upload" element={<Upload onPost={handlePost} currentUser={currentUser} />} />
           <Route path="/profile" element={
              <div className="max-w-xl mx-auto pb-20 px-4">
-                <div className="flex flex-col items-center pt-6">
+                <div className="flex justify-end pt-4">
+                    <button 
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                    >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Logout
+                    </button>
+                </div>
+                <div className="flex flex-col items-center -mt-2">
                     <img src={currentUser.avatar} className="w-24 h-24 rounded-full object-cover mb-2 border-4 border-gray-100 dark:border-gray-800" />
                     <h2 className="text-xl font-bold dark:text-white">{currentUser.name}</h2>
                     <p className="text-gray-500">@{currentUser.handle}</p>
@@ -1594,7 +1818,7 @@ const App = () => {
                     </div>
                     <div className="flex space-x-2 mb-8">
                         <Link to="/edit-profile" className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Edit Profile</Link>
-                        <button className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Share Profile</button>
+                        <button onClick={() => setShowShareSheet(true)} className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Share Profile</button>
                     </div>
                 </div>
                 <div className="grid grid-cols-3 gap-1">
@@ -1604,7 +1828,8 @@ const App = () => {
                 </div>
              </div>
           } />
-          <Route path="/profile/:id" element={<div className="p-10 text-center dark:text-white">User Profile Placeholder</div>} />
+          {/* Public Profile View (For shared links) */}
+          <Route path="/profile/:id" element={<UserProfile currentUser={currentUser} posts={posts} />} />
           <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateUser} />} />
           <Route path="/profile/followers" element={<NetworkList title="Followers" users={MOCK_USERS} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
           <Route path="/profile/following" element={<NetworkList title="Following" users={MOCK_USERS.filter(u => followingIds.includes(u.id))} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
@@ -1612,6 +1837,15 @@ const App = () => {
           <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={MOCK_USERS} currentUser={currentUser} onSend={handleSendMessage} onEdit={handleEditMessage} onToggleLike={handleToggleLikeMessage} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AnimatePresence>
+          {showShareSheet && (
+            <ShareSheet 
+              isOpen={showShareSheet} 
+              onClose={() => setShowShareSheet(false)} 
+              user={currentUser} 
+            />
+          )}
+        </AnimatePresence>
       </Layout>
     </Router>
   );
