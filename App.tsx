@@ -699,9 +699,31 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
       const secureUrl = cloudinaryData.secure_url;
       const mediaType = file.type.startsWith('video') ? 'video' : 'image';
 
-      // 2. Create Post Object (Local State Only)
+      // 2. Save to Supabase DB (Persistence)
+      const { data: insertedData, error: dbError } = await supabase
+        .from('posts')
+        .insert([
+            {
+                user_id: currentUser.id,
+                media_url: secureUrl,
+                type: mediaType,
+                caption: caption,
+                affiliate_link: affiliateLink || null,
+                affiliate_label: affiliateLabel || null,
+                likes: 0
+            }
+        ])
+        .select()
+        .single();
+
+      if (dbError) {
+          console.error("Supabase insert error:", dbError);
+          // If DB fails, we still show locally for UX
+      }
+
+      // 3. Create Post Object (Local State Update)
       const newPostData: Post = {
-        id: `p_${Date.now()}`,
+        id: insertedData ? insertedData.id : `p_${Date.now()}`,
         userId: currentUser.id,
         user: currentUser,
         type: mediaType,
@@ -715,7 +737,6 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
         likedByMe: false
       };
 
-      // 3. Update Local State
       onPost(newPostData);
       navigate('/');
       
@@ -826,20 +847,66 @@ const EditProfile = ({ user, onUpdate }: { user: UserType, onUpdate: (u: UserTyp
     const [handle, setHandle] = useState(user.handle);
     const [bio, setBio] = useState(user.bio);
     const [avatar, setAvatar] = useState(user.avatar);
+    const [file, setFile] = useState<File | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
   
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
+        const f = e.target.files[0];
+        setFile(f);
         const reader = new FileReader();
         reader.onload = (ev) => {
           if (ev.target?.result) setAvatar(ev.target.result as string);
         };
-        reader.readAsDataURL(e.target.files[0]);
+        reader.readAsDataURL(f);
       }
     };
   
-    const handleSave = () => {
-      onUpdate({ ...user, name, handle, bio, avatar });
-      navigate('/profile');
+    const handleSave = async () => {
+      setIsLoading(true);
+      try {
+          let avatarUrl = avatar;
+
+          // 1. If new file, Upload to Cloudinary
+          if (file) {
+              const formData = new FormData();
+              formData.append('file', file);
+              formData.append('upload_preset', 'oxh9k9eo'); 
+              formData.append('cloud_name', 'dgdvvnnnj');
+
+              const res = await fetch('https://api.cloudinary.com/v1_1/dgdvvnnnj/image/upload', {
+                  method: 'POST',
+                  body: formData
+              });
+              const data = await res.json();
+              avatarUrl = data.secure_url;
+          }
+
+          // 2. Update Supabase Profile
+          const updates = {
+              id: user.id,
+              full_name: name,
+              username: handle,
+              bio: bio,
+              avatar_url: avatarUrl,
+              updated_at: new Date()
+          };
+
+          const { error } = await supabase.from('profiles').upsert(updates);
+          
+          if (error) {
+              console.error("Profile update failed:", error);
+              alert("Failed to save profile. Please try again.");
+          } else {
+              // 3. Update Local State
+              onUpdate({ ...user, name, handle, bio, avatar: avatarUrl });
+              navigate('/profile');
+          }
+      } catch (e) {
+          console.error("Error saving profile:", e);
+      } finally {
+          setIsLoading(false);
+      }
     };
   
     return (
@@ -850,8 +917,8 @@ const EditProfile = ({ user, onUpdate }: { user: UserType, onUpdate: (u: UserTyp
             <ChevronLeft className="w-6 h-6" />
           </button>
           <h1 className="font-bold text-lg dark:text-white">Edit Profile</h1>
-          <button onClick={handleSave} className="text-brand-600 font-semibold hover:text-brand-700">
-            <Check className="w-6 h-6" />
+          <button onClick={handleSave} disabled={isLoading} className="text-brand-600 font-semibold hover:text-brand-700 disabled:opacity-50">
+            {isLoading ? <div className="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /> : <Check className="w-6 h-6" />}
           </button>
         </div>
   
@@ -1599,6 +1666,56 @@ const App = () => {
             setIsAuthChecking(false);
         });
         
+        // 3. Fetch Posts from DB
+        const fetchPosts = async () => {
+           try {
+              const { data, error } = await supabase
+                .from('posts')
+                .select(`
+                    *,
+                    profiles:user_id (
+                        id,
+                        username,
+                        full_name,
+                        avatar_url
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+              if (data && !error && mounted) {
+                 const mappedPosts: Post[] = data.map((p: any) => ({
+                    id: p.id,
+                    userId: p.user_id,
+                    user: {
+                       id: p.profiles?.id || 'unknown',
+                       name: p.profiles?.full_name || 'User',
+                       handle: p.profiles?.username || 'user',
+                       avatar: p.profiles?.avatar_url || 'https://via.placeholder.com/150',
+                       bio: '',
+                       followers: 0,
+                       following: 0
+                    },
+                    type: p.type || 'image',
+                    url: p.media_url,
+                    caption: p.caption,
+                    affiliateLink: p.affiliate_link,
+                    affiliateLabel: p.affiliate_label,
+                    likes: p.likes || 0,
+                    comments: [],
+                    timestamp: new Date(p.created_at).getTime(),
+                    likedByMe: false
+                 }));
+                 // Merge with mock posts if needed, or replace. Here we replace for real data feel
+                 if (mappedPosts.length > 0) {
+                     setPosts(prev => [...mappedPosts, ...INITIAL_POSTS]);
+                 }
+              }
+           } catch(e) {
+               console.error("Fetch posts error", e);
+           }
+        };
+        fetchPosts();
+
         return () => {
             mounted = false;
             subscription.unsubscribe();
