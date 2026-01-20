@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe, AlertTriangle } from 'lucide-react';
 import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS, INITIAL_MESSAGES } from './constants';
 import { Post, User as UserType, Story, Comment, Message } from './types';
 import PostCard from './components/PostCard';
@@ -17,10 +17,24 @@ const Button = ({ children, onClick, variant = 'primary', className = '', ...pro
     primary: "bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30 ring-1 ring-white/10",
     secondary: "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700",
     outline: "border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-brand-500 hover:text-brand-500 dark:hover:border-brand-400 dark:hover:text-brand-400 bg-transparent",
-    ghost: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+    ghost: "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
+    danger: "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/30"
   };
   return <button className={`${baseStyle} ${variants[variant as keyof typeof variants]} ${className}`} onClick={onClick} {...props}>{children}</button>;
 };
+
+// -- Loading Screen Component --
+const LoadingScreen = () => (
+  <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-black transition-colors duration-200">
+    <div className="relative">
+      <div className="w-16 h-16 border-4 border-gray-200 dark:border-gray-800 border-t-brand-600 rounded-full animate-spin"></div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Zap className="w-6 h-6 text-brand-600 animate-pulse" />
+      </div>
+    </div>
+    <h2 className="mt-4 text-lg font-bold text-gray-900 dark:text-white tracking-tight animate-pulse">AffiliSpeed</h2>
+  </div>
+);
 
 // -- Share Modal Component --
 
@@ -506,7 +520,7 @@ const Feed = ({
   onComment: (id: string) => void,
   onShare: (id: string) => void,
   onAddStory: (file: File, caption: string, link?: string, label?: string) => void, 
-  onDeleteStory: (id: string) => void,
+  onDeleteStory: (id: string) => void, 
   onEditStory: (id: string, caption: string) => void,
   onReplyToStory: (storyId: string, text: string) => void,
   currentUser: UserType 
@@ -1432,6 +1446,44 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
                <span className="text-[10px] font-semibold text-gray-400 mr-2">Seen</span>
             </div>
          </div>
+
+         {/* Restored Input Footer */}
+         <div className="p-3 bg-white dark:bg-black border-t border-gray-100 dark:border-gray-800 sticky bottom-0 z-20 pb-safe-area">
+             <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-900 rounded-full px-4 py-2">
+                 <button onClick={() => fileInputRef.current?.click()} className="p-1 text-brand-600 dark:text-brand-500">
+                    <div className="bg-brand-100 dark:bg-brand-900/30 p-1.5 rounded-full">
+                        <Camera className="w-5 h-5" />
+                    </div>
+                 </button>
+                 <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*,video/*" 
+                    onChange={handleFileSelect} 
+                 />
+                 <input 
+                    type="text" 
+                    className="flex-1 bg-transparent border-none outline-none text-sm max-h-20 py-2 dark:text-white placeholder-gray-500"
+                    placeholder="Message..."
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSend()}
+                 />
+                 {text.trim() ? (
+                     <button onClick={() => handleSend()} className="text-brand-600 font-semibold text-sm">Send</button>
+                 ) : (
+                     <>
+                        <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+                            <ImageIcon className="w-6 h-6" onClick={() => fileInputRef.current?.click()}/>
+                        </button>
+                        <button onClick={handleSendHeart} className="text-red-500 hover:scale-110 transition-transform">
+                            <Heart className="w-7 h-7 fill-current" />
+                        </button>
+                     </>
+                 )}
+             </div>
+         </div>
   
          {/* Edit Message Modal */}
          {editingMessage && (
@@ -1499,13 +1551,14 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout, isAut
   const location = useLocation();
 
   if (isAuthChecking) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-black">
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
-  if (!isAuthenticated && !['/login', '/signup', '/forgot-password'].includes(location.pathname)) {
+  const isPublicRoute = ['/login', '/signup', '/forgot-password'].includes(location.pathname);
+
+  // Strict Redirect Logic:
+  // If not authenticated AND trying to access a protected route (not in isPublicRoute), redirect to Login.
+  if (!isAuthenticated && !isPublicRoute) {
       return <Navigate to="/login" replace />;
   }
 
@@ -1584,6 +1637,7 @@ const App = () => {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [followingIds, setFollowingIds] = useState<string[]>(['u2', 'u3']);
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
   // Define fetchProfileData logic
   const fetchProfileData = async (userId: string) => {
@@ -1623,21 +1677,36 @@ const App = () => {
             
             if (session && mounted) {
                 setIsAuthenticated(true);
-                const profile = await fetchProfileData(session.user.id);
-                if (mounted && profile) {
-                    setCurrentUser(prev => ({
-                        ...prev,
-                        id: session.user.id,
-                        name: profile.name || session.user.user_metadata?.full_name || prev.name,
-                        handle: profile.handle || session.user.email?.split('@')[0] || prev.handle,
-                        avatar: profile.avatar || prev.avatar,
-                        bio: profile.bio || prev.bio
-                    }));
-                }
+                
+                // OPTIMIZATION: Set basic info immediately to prevent flashing mock data
+                // This ensures the user sees something relevant (like their email/name) instantly
+                // instead of the default mock user while the full profile loads.
+                setCurrentUser(prev => ({
+                    ...prev,
+                    id: session.user.id,
+                    name: session.user.user_metadata?.full_name || 'User',
+                    handle: session.user.email?.split('@')[0] || 'user',
+                    // Keep default avatar or use a placeholder until profile loads to avoid layout shift
+                }));
+
+                // Fetch full profile data in the BACKGROUND without blocking the UI load.
+                // This drastically reduces TTI (Time to Interactive).
+                fetchProfileData(session.user.id).then(profile => {
+                    if (mounted && profile) {
+                        setCurrentUser(prev => ({
+                            ...prev,
+                            name: profile.name || prev.name,
+                            handle: profile.handle || prev.handle,
+                            avatar: profile.avatar || prev.avatar,
+                            bio: profile.bio || prev.bio
+                        }));
+                    }
+                });
             }
         } catch (e) {
             console.error("Session check error", e);
         } finally {
+            // This runs almost immediately after getSession(), making the loading screen fast.
             if (mounted) setIsAuthChecking(false);
         }
 
@@ -1648,17 +1717,19 @@ const App = () => {
             setIsAuthenticated(!!session);
             
             if (session?.user) {
-                const profile = await fetchProfileData(session.user.id);
-                if (mounted && profile) {
-                    setCurrentUser(prev => ({
-                        ...prev,
-                        id: session.user.id,
-                        name: profile.name || session.user.user_metadata?.full_name || prev.name,
-                        handle: profile.handle || session.user.email?.split('@')[0] || prev.handle,
-                        avatar: profile.avatar || prev.avatar,
-                        bio: profile.bio || prev.bio
-                    }));
-                }
+                // Same optimization for auth state changes (e.g., login)
+                fetchProfileData(session.user.id).then(profile => {
+                     if (mounted && profile) {
+                        setCurrentUser(prev => ({
+                            ...prev,
+                            id: session.user.id,
+                            name: profile.name || session.user.user_metadata?.full_name || prev.name,
+                            handle: profile.handle || session.user.email?.split('@')[0] || prev.handle,
+                            avatar: profile.avatar || prev.avatar,
+                            bio: profile.bio || prev.bio
+                        }));
+                    }
+                });
             } else if (event === 'SIGNED_OUT') {
                 setCurrentUser(CURRENT_USER); // Reset to default mock user on logout
             }
@@ -1752,7 +1823,27 @@ const App = () => {
   };
 
   const handleDelete = (id: string) => {
-    setPosts(posts.filter(p => p.id !== id));
+    setPostToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!postToDelete) return;
+    const id = postToDelete;
+    setPostToDelete(null); // Close modal
+
+    // Optimistic UI Update
+    setPosts(prev => prev.filter(p => p.id !== id));
+
+    // DB Update
+    try {
+        const { error } = await supabase.from('posts').delete().eq('id', id);
+        if (error) {
+            console.error("Error deleting post:", error);
+            // Optionally could revert state here
+        }
+    } catch(e) {
+        console.error("Exception deleting post:", e);
+    }
   };
 
   const handleEdit = (post: Post) => {
@@ -1901,7 +1992,24 @@ const App = () => {
                 </div>
                 <div className="grid grid-cols-3 gap-1">
                     {posts.filter(p => p.userId === currentUser.id).map(p => (
-                        <div key={p.id} className="aspect-square bg-gray-100 dark:bg-gray-800 relative"><img src={p.url} className="w-full h-full object-cover" /></div>
+                        <div key={p.id} className="aspect-square bg-gray-100 dark:bg-gray-800 relative group cursor-pointer">
+                            {p.type === 'video' ? (
+                                <video src={p.url} className="w-full h-full object-cover" />
+                            ) : (
+                                <img src={p.url} className="w-full h-full object-cover" />
+                            )}
+                            <button 
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleDelete(p.id);
+                                }}
+                                className="absolute top-1 right-1 p-1.5 bg-black/60 backdrop-blur-sm text-white rounded-full opacity-100 transition-all hover:bg-red-600 shadow-sm z-10"
+                                title="Delete Post"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
                     ))}
                 </div>
              </div>
@@ -1922,6 +2030,38 @@ const App = () => {
               onClose={() => setShowShareSheet(false)} 
               user={currentUser} 
             />
+          )}
+          {postToDelete && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700"
+                >
+                    <div className="flex flex-col items-center text-center mb-6">
+                        <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
+                            <AlertTriangle className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete Post?</h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">Are you sure you want to delete this post? This action cannot be undone.</p>
+                    </div>
+                    <div className="flex space-x-3">
+                        <button 
+                            onClick={() => setPostToDelete(null)}
+                            className="flex-1 py-3 rounded-xl font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={confirmDelete}
+                            className="flex-1 py-3 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/30 transition-colors"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
           )}
         </AnimatePresence>
       </Layout>
