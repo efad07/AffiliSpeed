@@ -491,7 +491,7 @@ const Feed = ({
   onDelete, 
   onEdit,
   onComment,
-  onShare,
+  onShare, 
   onAddStory, 
   onDeleteStory, 
   onEditStory, 
@@ -1366,52 +1366,6 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
             </div>
          </div>
   
-         {/* Input Area */}
-         <div className="p-3 bg-white dark:bg-black flex items-center space-x-3 pb-safe-area">
-            <div className="bg-gray-100 dark:bg-gray-900 rounded-full flex items-center flex-1 px-4 py-2 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-700 transition-colors">
-              <button 
-                className="mr-2 text-gray-500 dark:text-gray-400 hover:text-brand-600"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <div className="p-1 rounded-full bg-blue-500/10 text-blue-500">
-                  <ImageIcon className="w-5 h-5" />
-                </div>
-              </button>
-              <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
-                  accept="image/*,video/*"
-                  onChange={handleFileSelect}
-              />
-              <input 
-                  type="text" 
-                  placeholder="Message..." 
-                  className="flex-1 bg-transparent border-none text-sm text-gray-900 dark:text-white focus:outline-none placeholder-gray-500"
-                  value={text}
-                  onChange={e => setText(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSend(e)}
-              />
-              {text.trim() ? (
-                 <button 
-                   onClick={() => handleSend()}
-                   className="text-blue-500 font-semibold text-sm ml-2 hover:text-blue-600"
-                 >
-                   Send
-                 </button>
-              ) : (
-                  <div className="flex space-x-3 text-gray-500 dark:text-gray-400 ml-2">
-                     <button onClick={() => fileInputRef.current?.click()} className="hover:text-brand-600 transition-colors">
-                       <Camera className="w-5 h-5" />
-                     </button>
-                     <button onClick={handleSendHeart} className="hover:text-red-500 transition-colors">
-                       <Heart className="w-5 h-5" />
-                     </button>
-                  </div>
-              )}
-            </div>
-         </div>
-  
          {/* Edit Message Modal */}
          {editingMessage && (
            <EditMessageModal 
@@ -1564,86 +1518,94 @@ const App = () => {
   const [followingIds, setFollowingIds] = useState<string[]>(['u2', 'u3']);
   const [showShareSheet, setShowShareSheet] = useState(false);
 
-  // Check active session on load
+  // Define fetchProfileData logic
+  const fetchProfileData = async (userId: string) => {
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Error fetching profile:", error);
+            return null;
+        }
+
+        if (data) {
+            return {
+                name: data.full_name || data.name,
+                avatar: data.avatar_url, 
+                bio: data.bio,
+                handle: data.username || data.handle
+            };
+        }
+    } catch (err) {
+        console.error("Unexpected error fetching profile:", err);
+    }
+    return null;
+  };
+
   useEffect(() => {
-    const fetchProfileData = async (userId: string) => {
+    let mounted = true;
+
+    const init = async () => {
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*') // Select all columns: full_name, avatar_url, bio, username/handle
-                .eq('id', userId)
-                .maybeSingle();
-
-            if (error) {
-                console.error("Error fetching profile:", error);
-                return null;
+            // 1. Check Initial Session
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session && mounted) {
+                setIsAuthenticated(true);
+                const profile = await fetchProfileData(session.user.id);
+                if (mounted && profile) {
+                    setCurrentUser(prev => ({
+                        ...prev,
+                        id: session.user.id,
+                        name: profile.name || session.user.user_metadata?.full_name || prev.name,
+                        handle: profile.handle || session.user.email?.split('@')[0] || prev.handle,
+                        avatar: profile.avatar || prev.avatar,
+                        bio: profile.bio || prev.bio
+                    }));
+                }
             }
-
-            if (data) {
-                return {
-                    name: data.full_name || data.name,
-                    // Map 'avatar_url' from DB to 'avatar' in our app state
-                    avatar: data.avatar_url, 
-                    bio: data.bio,
-                    handle: data.username || data.handle
-                };
-            }
-        } catch (err) {
-            console.error("Unexpected error fetching profile:", err);
+        } catch (e) {
+            console.error("Session check error", e);
+        } finally {
+            if (mounted) setIsAuthChecking(false);
         }
-        return null;
+
+        // 2. Listen for Auth Changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!mounted) return;
+            
+            setIsAuthenticated(!!session);
+            
+            if (session?.user) {
+                const profile = await fetchProfileData(session.user.id);
+                if (mounted && profile) {
+                    setCurrentUser(prev => ({
+                        ...prev,
+                        id: session.user.id,
+                        name: profile.name || session.user.user_metadata?.full_name || prev.name,
+                        handle: profile.handle || session.user.email?.split('@')[0] || prev.handle,
+                        avatar: profile.avatar || prev.avatar,
+                        bio: profile.bio || prev.bio
+                    }));
+                }
+            } else if (event === 'SIGNED_OUT') {
+                setCurrentUser(CURRENT_USER); // Reset to default mock user on logout
+            }
+            
+            setIsAuthChecking(false);
+        });
+        
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
     };
 
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setIsAuthenticated(true);
-          
-          // Fetch additional profile data from the 'profiles' table
-          const profileData = session.user ? await fetchProfileData(session.user.id) : null;
-
-          if (session.user) {
-               setCurrentUser(prev => ({
-                   ...prev,
-                   id: session.user.id,
-                   // Prioritize DB data -> Metadata -> Default/Previous
-                   name: profileData?.name || session.user.user_metadata?.full_name || prev.name,
-                   handle: profileData?.handle || session.user.email?.split('@')[0] || prev.handle,
-                   avatar: profileData?.avatar || prev.avatar,
-                   bio: profileData?.bio || prev.bio
-               }));
-          }
-        }
-      } catch (error) {
-        console.error("Session check failed", error);
-      } finally {
-        setIsAuthChecking(false);
-      }
-    };
-
-    checkSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setIsAuthenticated(!!session);
-      if (session?.user) {
-           const profileData = await fetchProfileData(session.user.id);
-           
-           setCurrentUser(prev => ({
-               ...prev,
-               id: session.user.id,
-               name: profileData?.name || session.user.user_metadata?.full_name || prev.name,
-               handle: profileData?.handle || session.user.email?.split('@')[0] || prev.handle,
-               avatar: profileData?.avatar || prev.avatar,
-               bio: profileData?.bio || prev.bio
-           }));
-      }
-      setIsAuthChecking(false);
-    });
-
-    return () => subscription.unsubscribe();
+    init();
   }, []);
 
   useEffect(() => {

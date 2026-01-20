@@ -1,13 +1,30 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Ensure the API key is available
-// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-const apiKey = process.env.API_KEY || "";
+// Safely access process.env to prevent "ReferenceError: process is not defined" in browser
+const getApiKey = () => {
+  try {
+    // Check if process exists (Node/Polyfilled env)
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+    // Check for Vite specific env if used later
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+      // @ts-ignore
+      return import.meta.env.VITE_API_KEY;
+    }
+  } catch (e) {
+    console.warn("Could not read API Key from environment");
+  }
+  return "";
+};
+
+const apiKey = getApiKey();
 const ai = new GoogleGenAI({ apiKey: apiKey });
 
 export const generateSmartCaption = async (imageFile: File, productName?: string): Promise<string> => {
   if (!apiKey) {
-    console.warn("Gemini API Key is missing.");
+    console.warn("Gemini API Key is missing. Please set REACT_APP_API_KEY or VITE_API_KEY.");
     return "Amazing product! Check it out. #deal";
   }
 
