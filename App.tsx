@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe, AlertTriangle } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe, AlertTriangle, RefreshCcw } from 'lucide-react';
 import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS, INITIAL_MESSAGES } from './constants';
 import { Post, User as UserType, Story, Comment, Message } from './types';
 import PostCard from './components/PostCard';
@@ -333,9 +333,6 @@ const SignupScreen = ({ onSignup }: { onSignup: () => void }) => {
         alert(error.message);
       } else {
         console.log("Sign up successful! Please check your email for verification.");
-        // Note: Supabase defaults to email confirmation. 
-        // If "Enable email confirmation" is on, user needs to verify before login works fully.
-        // For a smoother demo, often developers disable it in dev, or we show a message.
         alert("Account created! If email verification is enabled, please check your inbox.");
         onSignup();
         navigate('/');
@@ -423,7 +420,6 @@ const ForgotPasswordScreen = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call - Supabase has resetPasswordForEmail but needs SMTP setup usually
     setTimeout(() => {
       setIsLoading(false);
       setIsSent(true);
@@ -518,7 +514,7 @@ const Feed = ({
   onDelete: (id: string) => void, 
   onEdit: (post: Post) => void,
   onComment: (id: string) => void,
-  onShare: (id: string) => void,
+  onShare: (id: string) => void, 
   onAddStory: (file: File, caption: string, link?: string, label?: string) => void, 
   onDeleteStory: (id: string) => void, 
   onEditStory: (id: string, caption: string) => void,
@@ -1058,6 +1054,7 @@ const NetworkList = ({
 const Inbox = ({ messages, users, currentUser }: { messages: Message[], users: UserType[], currentUser: UserType }) => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [showNewChat, setShowNewChat] = useState(false);
   
     // Group messages by conversation partner
     const conversations = users.map(user => {
@@ -1091,7 +1088,7 @@ const Inbox = ({ messages, users, currentUser }: { messages: Message[], users: U
               <ChevronLeft className="w-7 h-7 text-gray-900 dark:text-white -ml-2 mr-1" />
               <h1 className="font-bold text-xl dark:text-white">{currentUser.handle}</h1>
           </div>
-          <button className="text-gray-900 dark:text-white">
+          <button onClick={() => setShowNewChat(true)} className="text-gray-900 dark:text-white">
               <Edit2 className="w-6 h-6" />
           </button>
         </div>
@@ -1156,6 +1153,45 @@ const Inbox = ({ messages, users, currentUser }: { messages: Message[], users: U
             })
           )}
         </div>
+
+        {/* New Chat Modal */}
+        <AnimatePresence>
+          {showNewChat && (
+            <motion.div 
+               initial={{ opacity: 0, y: "100%" }}
+               animate={{ opacity: 1, y: 0 }}
+               exit={{ opacity: 0, y: "100%" }}
+               className="fixed inset-0 z-50 bg-white dark:bg-black flex flex-col"
+            >
+               <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+                  <button onClick={() => setShowNewChat(false)} className="text-gray-900 dark:text-white">
+                    <X className="w-6 h-6" />
+                  </button>
+                  <h2 className="font-bold text-lg dark:text-white">New Message</h2>
+                  <div className="w-6" /> {/* Spacer */}
+               </div>
+               <div className="p-4 overflow-y-auto">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">Suggested</h3>
+                  {users.filter(u => u.id !== currentUser.id).map(user => (
+                    <div 
+                      key={user.id} 
+                      onClick={() => {
+                        navigate(`/messages/${user.id}`);
+                        setShowNewChat(false);
+                      }}
+                      className="flex items-center space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl cursor-pointer"
+                    >
+                       <img src={user.avatar} className="w-12 h-12 rounded-full object-cover" />
+                       <div>
+                          <p className="font-bold text-gray-900 dark:text-white">{user.name}</p>
+                          <p className="text-sm text-gray-500">@{user.handle}</p>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
 };
@@ -1197,6 +1233,12 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
+
+    // Camera Capture States
+    const [showCameraModal, setShowCameraModal] = useState(false);
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+    const cameraVideoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     
     const partner = users.find(u => u.id === userId);
   
@@ -1218,8 +1260,11 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
         if (localStream) {
           localStream.getTracks().forEach(track => track.stop());
         }
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+        }
       };
-    }, [localStream]);
+    }, [localStream, cameraStream]);
   
     const handleSend = (e?: React.FormEvent) => {
       if (e) e.preventDefault();
@@ -1252,6 +1297,47 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
       }
     };
 
+    // --- Camera Capture Logic ---
+    const startCamera = async () => {
+        try {
+            setShowCameraModal(true);
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            setCameraStream(stream);
+            if (cameraVideoRef.current) {
+                cameraVideoRef.current.srcObject = stream;
+            }
+        } catch (err) {
+            console.error("Camera access denied:", err);
+            alert("Unable to access camera. Please allow camera permissions.");
+            setShowCameraModal(false);
+        }
+    };
+
+    const stopCamera = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            setCameraStream(null);
+        }
+        setShowCameraModal(false);
+    };
+
+    const capturePhoto = () => {
+        if (cameraVideoRef.current && canvasRef.current && userId) {
+            const video = cameraVideoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg');
+                onSend("", userId, dataUrl, 'image');
+                stopCamera();
+            }
+        }
+    };
+
+    // --- Call Logic ---
     const startCall = async (type: 'audio' | 'video') => {
       setCallType(type);
       setIsCalling(true);
@@ -1350,6 +1436,44 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
            )}
          </AnimatePresence>
 
+         {/* Camera Capture Modal */}
+         <AnimatePresence>
+            {showCameraModal && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-50 bg-black flex flex-col"
+                >
+                    <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+                        <video 
+                            ref={el => {
+                                if (el && cameraStream) el.srcObject = cameraStream;
+                                // @ts-ignore
+                                cameraVideoRef.current = el;
+                            }}
+                            autoPlay 
+                            playsInline 
+                            className="w-full h-full object-cover"
+                        />
+                        <canvas ref={canvasRef} className="hidden" />
+                        
+                        <button onClick={stopCamera} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+                    <div className="p-6 bg-black flex justify-center items-center pb-12">
+                         <button 
+                            onClick={capturePhoto} 
+                            className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-transparent active:bg-white/20 transition-colors"
+                        >
+                            <div className="w-16 h-16 rounded-full bg-white"></div>
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+         </AnimatePresence>
+
          {/* Header */}
          <div className="flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-black z-10">
             <button onClick={() => navigate('/messages')} className="mr-4 text-gray-900 dark:text-white">
@@ -1377,7 +1501,12 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
                <img src={partner.avatar} className="w-20 h-20 rounded-full object-cover mb-3" />
                <h3 className="text-lg font-bold dark:text-white">{partner.name}</h3>
                <p className="text-sm text-gray-500">Instagram-style messaging on AffiliSpeed</p>
-               <button className="mt-4 px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-lg text-sm font-semibold dark:text-white">View Profile</button>
+               <button 
+                 onClick={() => navigate(`/profile/${partner.id}`)}
+                 className="mt-4 px-4 py-1.5 bg-gray-200 dark:bg-gray-800 rounded-lg text-sm font-semibold dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+               >
+                 View Profile
+               </button>
             </div>
   
             <div className="text-center text-xs text-gray-400 my-4">TODAY</div>
@@ -1450,11 +1579,14 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
          {/* Restored Input Footer */}
          <div className="p-3 bg-white dark:bg-black border-t border-gray-100 dark:border-gray-800 sticky bottom-0 z-20 pb-safe-area">
              <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-900 rounded-full px-4 py-2">
-                 <button onClick={() => fileInputRef.current?.click()} className="p-1 text-brand-600 dark:text-brand-500">
+                 {/* Camera Button - Opens Live Camera */}
+                 <button onClick={startCamera} className="p-1 text-brand-600 dark:text-brand-500">
                     <div className="bg-brand-100 dark:bg-brand-900/30 p-1.5 rounded-full">
                         <Camera className="w-5 h-5" />
                     </div>
                  </button>
+                 
+                 {/* Gallery Input Hidden Field */}
                  <input 
                     type="file" 
                     ref={fileInputRef} 
@@ -1462,6 +1594,7 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
                     accept="image/*,video/*" 
                     onChange={handleFileSelect} 
                  />
+                 
                  <input 
                     type="text" 
                     className="flex-1 bg-transparent border-none outline-none text-sm max-h-20 py-2 dark:text-white placeholder-gray-500"
@@ -1474,6 +1607,7 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
                      <button onClick={() => handleSend()} className="text-brand-600 font-semibold text-sm">Send</button>
                  ) : (
                      <>
+                        {/* Gallery Button - Opens File Picker */}
                         <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
                             <ImageIcon className="w-6 h-6" onClick={() => fileInputRef.current?.click()}/>
                         </button>
@@ -1502,37 +1636,85 @@ const ChatRoom = ({ messages, users, currentUser, onSend, onEdit, onToggleLike }
 
 // -- Newly Implemented Missing Components --
 
-const UserProfile = ({ currentUser, posts }: { currentUser: UserType, posts: Post[] }) => {
+const UserProfile = ({ 
+  currentUser, 
+  posts, 
+  users, 
+  followingIds, 
+  onToggleFollow 
+}: { 
+  currentUser: UserType, 
+  posts: Post[], 
+  users: UserType[], 
+  followingIds: string[], 
+  onToggleFollow: (id: string) => void 
+}) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const viewedUser = MOCK_USERS.find(u => u.id === id) || (id === currentUser.id ? currentUser : null);
+  
+  // Find user in `users` array or check if it's current user
+  let viewedUser = users.find(u => u.id === id);
+  if (id === currentUser.id) viewedUser = currentUser;
 
   if (!viewedUser) return <div className="p-10 text-center dark:text-white">User not found</div>;
 
+  const isMe = viewedUser.id === currentUser.id;
+  const isFollowing = followingIds.includes(viewedUser.id);
+
   return (
     <div className="max-w-xl mx-auto pb-20 px-4">
+       {/* Header with Back button */}
        <div className="flex items-center pt-4 mb-2">
           <button onClick={() => navigate(-1)} className="mr-3 text-gray-900 dark:text-white">
             <ChevronLeft className="w-6 h-6" />
           </button>
           <h1 className="font-bold text-lg dark:text-white">{viewedUser.handle}</h1>
        </div>
+       
        <div className="flex flex-col items-center pt-2">
           <img src={viewedUser.avatar} className="w-24 h-24 rounded-full object-cover mb-2 border-4 border-gray-100 dark:border-gray-800" />
-          <h2 className="text-xl font-bold dark:text-white">{viewedUser.name}</h2>
+          <h2 className="text-xl font-bold dark:text-white flex items-center">
+            {viewedUser.name}
+            {viewedUser.isVerified && <svg className="w-4 h-4 text-blue-500 ml-1 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>}
+          </h2>
           <p className="text-gray-500">@{viewedUser.handle}</p>
           <p className="text-center mt-2 px-6 dark:text-gray-300">{viewedUser.bio}</p>
+          
           <div className="flex space-x-6 mt-4 mb-6">
-              <div className="text-center"><div className="font-bold dark:text-white">{viewedUser.followers}</div><div className="text-xs text-gray-500">Followers</div></div>
-              <div className="text-center"><div className="font-bold dark:text-white">{viewedUser.following}</div><div className="text-xs text-gray-500">Following</div></div>
+              <div className="text-center">
+                <div className="font-bold dark:text-white">{viewedUser.followers}</div>
+                <div className="text-xs text-gray-500">Followers</div>
+              </div>
+              <div className="text-center">
+                <div className="font-bold dark:text-white">{viewedUser.following}</div>
+                <div className="text-xs text-gray-500">Following</div>
+              </div>
           </div>
+          
           <div className="flex space-x-2 mb-8">
-              <button className="px-6 py-2 bg-brand-600 text-white rounded-lg font-semibold text-sm shadow-lg shadow-brand-500/20">Follow</button>
-              <button className="px-6 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Message</button>
+              {isMe ? (
+                  <button className="px-6 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Edit Profile</button>
+              ) : (
+                  <>
+                    <button 
+                        onClick={() => onToggleFollow(viewedUser!.id)}
+                        className={`px-6 py-2 rounded-lg font-semibold text-sm shadow-lg transition-all ${isFollowing ? 'bg-gray-200 dark:bg-gray-800 text-black dark:text-white' : 'bg-brand-600 text-white shadow-brand-500/20'}`}
+                    >
+                        {isFollowing ? 'Following' : 'Follow'}
+                    </button>
+                    <button 
+                        onClick={() => navigate(`/messages/${viewedUser!.id}`)}
+                        className="px-6 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white"
+                    >
+                        Message
+                    </button>
+                  </>
+              )}
           </div>
       </div>
+      {/* Grid of posts */}
       <div className="grid grid-cols-3 gap-1">
-          {posts.filter(p => p.userId === viewedUser.id).map(p => (
+          {posts.filter(p => p.userId === viewedUser!.id).map(p => (
               <div key={p.id} className="aspect-square bg-gray-100 dark:bg-gray-800 relative"><img src={p.url} className="w-full h-full object-cover" /></div>
           ))}
       </div>
@@ -1628,184 +1810,42 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout, isAut
 };
 
 const App = () => {
-  const [theme, setTheme] = useState('light');
-  const [currentUser, setCurrentUser] = useState<UserType>(CURRENT_USER);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [followingIds, setFollowingIds] = useState<string[]>(['u2', 'u3']);
-  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserType>(CURRENT_USER);
+  const [users, setUsers] = useState<UserType[]>(MOCK_USERS);
+  const [followingIds, setFollowingIds] = useState<string[]>(['u1', 'u3']);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
-  // Define fetchProfileData logic
-  const fetchProfileData = async (userId: string) => {
-    try {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
-
-        if (error) {
-            console.error("Error fetching profile:", error);
-            return null;
-        }
-
-        if (data) {
-            return {
-                name: data.full_name || data.name,
-                avatar: data.avatar_url, 
-                bio: data.bio,
-                handle: data.username || data.handle
-            };
-        }
-    } catch (err) {
-        console.error("Unexpected error fetching profile:", err);
-    }
-    return null;
-  };
-
+  // Initialize theme
   useEffect(() => {
-    let mounted = true;
-
-    const init = async () => {
-        try {
-            // 1. Check Initial Session
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session && mounted) {
-                setIsAuthenticated(true);
-                
-                // OPTIMIZATION: Set basic info immediately to prevent flashing mock data
-                // This ensures the user sees something relevant (like their email/name) instantly
-                // instead of the default mock user while the full profile loads.
-                setCurrentUser(prev => ({
-                    ...prev,
-                    id: session.user.id,
-                    name: session.user.user_metadata?.full_name || 'User',
-                    handle: session.user.email?.split('@')[0] || 'user',
-                    // Keep default avatar or use a placeholder until profile loads to avoid layout shift
-                }));
-
-                // Fetch full profile data in the BACKGROUND without blocking the UI load.
-                // This drastically reduces TTI (Time to Interactive).
-                fetchProfileData(session.user.id).then(profile => {
-                    if (mounted && profile) {
-                        setCurrentUser(prev => ({
-                            ...prev,
-                            name: profile.name || prev.name,
-                            handle: profile.handle || prev.handle,
-                            avatar: profile.avatar || prev.avatar,
-                            bio: profile.bio || prev.bio
-                        }));
-                    }
-                });
-            }
-        } catch (e) {
-            console.error("Session check error", e);
-        } finally {
-            // This runs almost immediately after getSession(), making the loading screen fast.
-            if (mounted) setIsAuthChecking(false);
-        }
-
-        // 2. Listen for Auth Changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (!mounted) return;
-            
-            setIsAuthenticated(!!session);
-            
-            if (session?.user) {
-                // Same optimization for auth state changes (e.g., login)
-                fetchProfileData(session.user.id).then(profile => {
-                     if (mounted && profile) {
-                        setCurrentUser(prev => ({
-                            ...prev,
-                            id: session.user.id,
-                            name: profile.name || session.user.user_metadata?.full_name || prev.name,
-                            handle: profile.handle || session.user.email?.split('@')[0] || prev.handle,
-                            avatar: profile.avatar || prev.avatar,
-                            bio: profile.bio || prev.bio
-                        }));
-                    }
-                });
-            } else if (event === 'SIGNED_OUT') {
-                setCurrentUser(CURRENT_USER); // Reset to default mock user on logout
-            }
-            
-            setIsAuthChecking(false);
-        });
-        
-        // 3. Fetch Posts from DB
-        const fetchPosts = async () => {
-           try {
-              const { data, error } = await supabase
-                .from('posts')
-                .select(`
-                    *,
-                    profiles:user_id (
-                        id,
-                        username,
-                        full_name,
-                        avatar_url
-                    )
-                `)
-                .order('created_at', { ascending: false });
-
-              if (data && !error && mounted) {
-                 const mappedPosts: Post[] = data.map((p: any) => ({
-                    id: p.id,
-                    userId: p.user_id,
-                    user: {
-                       id: p.profiles?.id || 'unknown',
-                       name: p.profiles?.full_name || 'User',
-                       handle: p.profiles?.username || 'user',
-                       avatar: p.profiles?.avatar_url || 'https://via.placeholder.com/150',
-                       bio: '',
-                       followers: 0,
-                       following: 0
-                    },
-                    type: p.type || 'image',
-                    url: p.media_url,
-                    caption: p.caption,
-                    affiliateLink: p.affiliate_link,
-                    affiliateLabel: p.affiliate_label,
-                    likes: p.likes || 0,
-                    comments: [],
-                    timestamp: new Date(p.created_at).getTime(),
-                    likedByMe: false
-                 }));
-                 // Merge with mock posts if needed, or replace. Here we replace for real data feel
-                 if (mappedPosts.length > 0) {
-                     setPosts(prev => [...mappedPosts, ...INITIAL_POSTS]);
-                 }
-              }
-           } catch(e) {
-               console.error("Fetch posts error", e);
-           }
-        };
-        fetchPosts();
-
-        return () => {
-            mounted = false;
-            subscription.unsubscribe();
-        };
-    };
-
-    init();
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+    }
   }, []);
 
+  // Initialize Auth
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      setIsAuthChecking(false);
+    };
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
   const handleLogout = async () => {
@@ -1813,16 +1853,24 @@ const App = () => {
     setIsAuthenticated(false);
   };
 
-  const handleLogin = () => {
-    // This is now purely for state/navigation updates triggered by the LoginScreen
-    setIsAuthenticated(true);
-  };
-
   const handleLike = (id: string) => {
-    setPosts(posts.map(p => p.id === id ? { ...p, likes: p.likedByMe ? p.likes - 1 : p.likes + 1, likedByMe: !p.likedByMe } : p));
+    setPosts(prev => prev.map(p => {
+      if (p.id === id) {
+        return {
+          ...p,
+          likes: p.likedByMe ? p.likes - 1 : p.likes + 1,
+          likedByMe: !p.likedByMe
+        };
+      }
+      return p;
+    }));
   };
 
-  const handleDelete = (id: string) => {
+  const handlePost = (newPost: Post) => {
+    setPosts(prev => [newPost, ...prev]);
+  };
+
+  const handleDeletePost = (id: string) => {
     setPostToDelete(id);
   };
 
@@ -1839,231 +1887,253 @@ const App = () => {
         const { error } = await supabase.from('posts').delete().eq('id', id);
         if (error) {
             console.error("Error deleting post:", error);
-            // Optionally could revert state here
+            alert("Could not delete post from database.");
         }
     } catch(e) {
         console.error("Exception deleting post:", e);
     }
   };
 
-  const handleEdit = (post: Post) => {
-    // Basic prompt implementation for edit
-    const newCaption = prompt("Edit caption:", post.caption);
-    if (newCaption !== null) {
-        setPosts(posts.map(p => p.id === post.id ? { ...p, caption: newCaption } : p));
-    }
-  };
-
-  const handleComment = (id: string) => {
-    console.log("Comment on post", id);
-  };
-
-  const handleShare = (id: string) => {
-    console.log("Share post", id);
-  };
-
-  const handlePost = (post: Post) => {
-    setPosts([post, ...posts]);
-  };
-
   const handleAddStory = (file: File, caption: string, link?: string, label?: string) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const story: Story = {
-        id: `s_${Date.now()}`,
-        userId: currentUser.id,
-        user: currentUser,
-        mediaUrl: e.target?.result as string,
-        type: file.type.startsWith('video') ? 'video' : 'image',
-        caption,
-        affiliateLink: link,
-        affiliateLabel: label,
-        expiresAt: Date.now() + 86400000,
-        viewed: false
-      };
-      setStories([story, ...stories]);
+       const url = e.target?.result as string;
+       const newStory: Story = {
+           id: `s_${Date.now()}`,
+           userId: currentUser.id,
+           user: currentUser,
+           mediaUrl: url,
+           type: file.type.startsWith('video') ? 'video' : 'image',
+           caption: caption,
+           affiliateLink: link,
+           affiliateLabel: label,
+           expiresAt: Date.now() + 86400000,
+           viewed: false
+       };
+       setStories(prev => [newStory, ...prev]);
     };
     reader.readAsDataURL(file);
   };
 
   const handleDeleteStory = (id: string) => {
-    setStories(stories.filter(s => s.id !== id));
+    setStories(prev => prev.filter(s => s.id !== id));
   };
 
   const handleEditStory = (id: string, caption: string) => {
-    setStories(stories.map(s => s.id === id ? { ...s, caption } : s));
+    setStories(prev => prev.map(s => s.id === id ? { ...s, caption } : s));
   };
   
-  const handleReplyStory = (storyId: string, text: string) => {
+  const handleReplyToStory = (storyId: string, text: string) => {
       const story = stories.find(s => s.id === storyId);
       if (story) {
-        handleSendMessage(`Replied to story: ${text}`, story.userId);
+        handleSendMsg(`Replied to story: ${text}`, story.userId);
       }
   };
 
-  const handleUpdateUser = (user: UserType) => {
-    setCurrentUser(user);
-  };
-
-  const handleToggleFollow = (id: string) => {
-    setFollowingIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const handleSendMessage = async (text: string, receiverId: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
-    // 1. Optimistic Update
-    const msg: Message = {
-      id: `m_${Date.now()}`,
-      senderId: currentUser.id,
-      receiverId,
-      text,
-      mediaUrl,
-      mediaType,
-      timestamp: Date.now(),
-      isRead: false
-    };
-    setMessages(prev => [...prev, msg]);
-
-    // 2. Save to Supabase Database
-    try {
-        const { error } = await supabase
-            .from('messages')
-            .insert([{ 
-                sender_id: currentUser.id,
-                receiver_id: receiverId,
-                text: text,
-                media_url: mediaUrl,
-                media_type: mediaType
-                // timestamp is usually auto-generated by Supabase 'created_at'
-            }]);
-
-        if (error) {
-            console.error("Supabase Database Error:", error.message);
-        } else {
-            console.log("Message saved to Supabase!");
-        }
-    } catch (err) {
-        console.error("Error saving message:", err);
-    }
+  const handleSendMsg = (text: string, receiverId: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
+      const newMsg: Message = {
+          id: `m_${Date.now()}`,
+          senderId: currentUser.id,
+          receiverId: receiverId,
+          text,
+          mediaUrl,
+          mediaType,
+          timestamp: Date.now(),
+          isRead: false
+      };
+      setMessages(prev => [...prev, newMsg]);
   };
 
   const handleEditMessage = (id: string, text: string) => {
-    setMessages(messages.map(m => m.id === id ? { ...m, text, isEdited: true } : m));
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, text, isEdited: true } : m));
   };
 
-  const handleToggleLikeMessage = (id: string) => {
-    setMessages(messages.map(m => m.id === id ? { ...m, liked: !m.liked } : m));
+  const handleToggleMessageLike = (id: string) => {
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, liked: !m.liked } : m));
+  };
+
+  const handleUpdateProfile = (updatedUser: UserType) => {
+      setCurrentUser(updatedUser);
+      // Update local posts references
+      setPosts(prev => prev.map(p => p.userId === updatedUser.id ? { ...p, user: updatedUser } : p));
+  };
+
+  const handleToggleFollow = (targetUserId: string) => {
+      // 1. Calculate new state first
+      const isFollowing = followingIds.includes(targetUserId);
+      const newFollowingIds = isFollowing 
+          ? followingIds.filter(id => id !== targetUserId)
+          : [...followingIds, targetUserId];
+      
+      // 2. Update following IDs state
+      setFollowingIds(newFollowingIds);
+
+      // 3. Update target user's follower count in `users` array
+      setUsers(prev => prev.map(u => 
+          u.id === targetUserId 
+              ? { ...u, followers: isFollowing ? Math.max(0, u.followers - 1) : u.followers + 1 }
+              : u
+      ));
+
+      // 4. Update current user's following count
+      setCurrentUser(prev => ({
+          ...prev,
+          following: isFollowing ? Math.max(0, prev.following - 1) : prev.following + 1
+      }));
+  };
+
+  const ProfilePage = () => {
+    const [showShare, setShowShare] = useState(false);
+    return (
+        <div className="max-w-xl mx-auto pb-20 px-4 min-h-screen">
+            <div className="flex items-center justify-between pt-4 mb-2">
+                <h1 className="font-bold text-xl dark:text-white">{currentUser.handle}</h1>
+                <div className="flex space-x-3">
+                    <Link to="/upload" className="text-gray-900 dark:text-white"><PlusSquare className="w-6 h-6" /></Link>
+                    <button onClick={() => setShowShare(true)} className="text-gray-900 dark:text-white"><Share2 className="w-6 h-6" /></button>
+                    <button onClick={handleLogout} className="text-gray-900 dark:text-white"><LogOut className="w-6 h-6" /></button>
+                </div>
+            </div>
+            
+            <div className="flex flex-col items-center pt-2">
+                <div className="relative">
+                    <img src={currentUser.avatar} className="w-24 h-24 rounded-full object-cover mb-2 border-4 border-gray-100 dark:border-gray-800" />
+                    {currentUser.isVerified && <div className="absolute bottom-2 right-0 bg-blue-500 rounded-full p-0.5 border-2 border-white"><svg className="w-3 h-3 text-white fill-current" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>}
+                </div>
+                <h2 className="text-xl font-bold dark:text-white">{currentUser.name}</h2>
+                <p className="text-center mt-2 px-6 dark:text-gray-300">{currentUser.bio}</p>
+                
+                <div className="flex space-x-6 mt-4 mb-6">
+                    <Link to="/profile/followers" className="text-center cursor-pointer hover:opacity-70">
+                        <div className="font-bold dark:text-white">{currentUser.followers}</div>
+                        <div className="text-xs text-gray-500">Followers</div>
+                    </Link>
+                    <Link to="/profile/following" className="text-center cursor-pointer hover:opacity-70">
+                        <div className="font-bold dark:text-white">{currentUser.following}</div>
+                        <div className="text-xs text-gray-500">Following</div>
+                    </Link>
+                </div>
+
+                <div className="flex space-x-2 mb-8">
+                    <Link to="/edit-profile" className="px-6 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Edit Profile</Link>
+                    <button onClick={() => setShowShare(true)} className="px-6 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Share Profile</button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1">
+                {posts.filter(p => p.userId === currentUser.id).map(p => (
+                    <div key={p.id} className="aspect-square bg-gray-100 dark:bg-gray-800 relative group cursor-pointer">
+                        <img src={p.url} className="w-full h-full object-cover" />
+                        {p.type === 'video' && <div className="absolute top-1 right-1"><Video className="w-4 h-4 text-white drop-shadow-md" /></div>}
+                        <button 
+                            className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => { e.stopPropagation(); handleDeletePost(p.id); }}
+                        >
+                            <Trash2 className="w-3 h-3" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            <ShareSheet isOpen={showShare} onClose={() => setShowShare(false)} user={currentUser} />
+        </div>
+    );
   };
 
   return (
     <Router>
-      <Layout theme={theme} toggleTheme={toggleTheme} isAuthenticated={isAuthenticated} onLogout={handleLogout} isAuthChecking={isAuthChecking}>
-        <Routes>
-          <Route path="/login" element={<LoginScreen onLogin={handleLogin} />} />
-          <Route path="/signup" element={<SignupScreen onSignup={handleLogin} />} />
-          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-          <Route path="/" element={<Feed posts={posts} stories={stories} onLike={handleLike} onDelete={handleDelete} onEdit={handleEdit} onComment={handleComment} onShare={handleShare} onAddStory={handleAddStory} onDeleteStory={handleDeleteStory} onEditStory={handleEditStory} onReplyToStory={handleReplyStory} currentUser={currentUser} />} />
-          <Route path="/search" element={<Explore posts={posts} />} />
-          <Route path="/shop" element={<Shop posts={posts} />} />
-          <Route path="/upload" element={<Upload onPost={handlePost} currentUser={currentUser} />} />
-          <Route path="/profile" element={
-             <div className="max-w-xl mx-auto pb-20 px-4">
-                <div className="flex justify-end pt-4">
-                    <button 
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 dark:bg-red-900/20 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                    >
-                        <LogOut className="w-3.5 h-3.5" />
-                        Logout
-                    </button>
-                </div>
-                <div className="flex flex-col items-center -mt-2">
-                    <img src={currentUser.avatar} className="w-24 h-24 rounded-full object-cover mb-2 border-4 border-gray-100 dark:border-gray-800" />
-                    <h2 className="text-xl font-bold dark:text-white">{currentUser.name}</h2>
-                    <p className="text-gray-500">@{currentUser.handle}</p>
-                    <p className="text-center mt-2 px-6 dark:text-gray-300">{currentUser.bio}</p>
-                    <div className="flex space-x-6 mt-4 mb-6">
-                        <Link to="/profile/followers" className="text-center"><div className="font-bold dark:text-white">{currentUser.followers}</div><div className="text-xs text-gray-500">Followers</div></Link>
-                        <Link to="/profile/following" className="text-center"><div className="font-bold dark:text-white">{currentUser.following}</div><div className="text-xs text-gray-500">Following</div></Link>
-                    </div>
-                    <div className="flex space-x-2 mb-8">
-                        <Link to="/edit-profile" className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Edit Profile</Link>
-                        <button onClick={() => setShowShareSheet(true)} className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-lg font-semibold text-sm dark:text-white">Share Profile</button>
-                    </div>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                    {posts.filter(p => p.userId === currentUser.id).map(p => (
-                        <div key={p.id} className="aspect-square bg-gray-100 dark:bg-gray-800 relative group cursor-pointer">
-                            {p.type === 'video' ? (
-                                <video src={p.url} className="w-full h-full object-cover" />
-                            ) : (
-                                <img src={p.url} className="w-full h-full object-cover" />
-                            )}
-                            <button 
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleDelete(p.id);
-                                }}
-                                className="absolute top-1 right-1 p-1.5 bg-black/60 backdrop-blur-sm text-white rounded-full opacity-100 transition-all hover:bg-red-600 shadow-sm z-10"
-                                title="Delete Post"
-                            >
-                                <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-             </div>
-          } />
-          {/* Public Profile View (For shared links) */}
-          <Route path="/profile/:id" element={<UserProfile currentUser={currentUser} posts={posts} />} />
-          <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateUser} />} />
-          <Route path="/profile/followers" element={<NetworkList title="Followers" users={MOCK_USERS} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
-          <Route path="/profile/following" element={<NetworkList title="Following" users={MOCK_USERS.filter(u => followingIds.includes(u.id))} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
-          <Route path="/messages" element={<Inbox messages={messages} users={MOCK_USERS} currentUser={currentUser} />} />
-          <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={MOCK_USERS} currentUser={currentUser} onSend={handleSendMessage} onEdit={handleEditMessage} onToggleLike={handleToggleLikeMessage} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <AnimatePresence>
-          {showShareSheet && (
-            <ShareSheet 
-              isOpen={showShareSheet} 
-              onClose={() => setShowShareSheet(false)} 
-              user={currentUser} 
-            />
-          )}
-          {postToDelete && (
-            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700"
-                >
-                    <div className="flex flex-col items-center text-center mb-6">
-                        <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
-                            <AlertTriangle className="w-6 h-6" />
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete Post?</h3>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Are you sure you want to delete this post? This action cannot be undone.</p>
-                    </div>
-                    <div className="flex space-x-3">
-                        <button 
-                            onClick={() => setPostToDelete(null)}
-                            className="flex-1 py-3 rounded-xl font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            onClick={confirmDelete}
-                            className="flex-1 py-3 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/30 transition-colors"
-                        >
-                            Delete
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+      <Layout 
+        theme={theme} 
+        toggleTheme={toggleTheme} 
+        isAuthenticated={isAuthenticated} 
+        onLogout={handleLogout}
+        isAuthChecking={isAuthChecking}
+      >
+         <Routes>
+             <Route path="/login" element={<LoginScreen onLogin={() => setIsAuthenticated(true)} />} />
+             <Route path="/signup" element={<SignupScreen onSignup={() => setIsAuthenticated(true)} />} />
+             <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+
+             <Route path="/" element={
+                 <Feed 
+                    posts={posts} 
+                    stories={stories} 
+                    onLike={handleLike} 
+                    onDelete={handleDeletePost}
+                    onEdit={(post) => console.log('Edit', post)}
+                    onComment={(id) => console.log('Comment', id)}
+                    onShare={(id) => console.log('Share', id)}
+                    onAddStory={handleAddStory}
+                    onDeleteStory={handleDeleteStory}
+                    onEditStory={handleEditStory}
+                    onReplyToStory={handleReplyToStory}
+                    currentUser={currentUser}
+                 />
+             } />
+
+             <Route path="/search" element={<Explore posts={posts} />} />
+             <Route path="/shop" element={<Shop posts={posts} />} />
+             <Route path="/upload" element={<Upload onPost={handlePost} currentUser={currentUser} />} />
+
+             <Route path="/profile" element={<ProfilePage />} />
+             
+             {/* Pass users, followingIds, and onToggleFollow to UserProfile to make it real */}
+             <Route path="/profile/:id" element={
+               <UserProfile 
+                 currentUser={currentUser} 
+                 posts={posts} 
+                 users={users} 
+                 followingIds={followingIds}
+                 onToggleFollow={handleToggleFollow}
+               />
+             } />
+             
+             <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateProfile} />} />
+
+             <Route path="/messages" element={<Inbox messages={messages} users={users} currentUser={currentUser} />} />
+             <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={users} currentUser={currentUser} onSend={handleSendMsg} onEdit={handleEditMessage} onToggleLike={handleToggleMessageLike} />} />
+
+             <Route path="/profile/followers" element={<NetworkList title="Followers" users={MOCK_USERS} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
+             <Route path="/profile/following" element={<NetworkList title="Following" users={MOCK_USERS} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
+
+             <Route path="*" element={<Navigate to="/" replace />} />
+         </Routes>
+
+         <AnimatePresence>
+            {postToDelete && (
+              <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
+                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPostToDelete(null)} />
+                  <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700 relative z-10"
+                  >
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
+                              <AlertTriangle className="w-6 h-6" />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete Post?</h3>
+                          <p className="text-gray-500 dark:text-gray-400 text-sm">Are you sure you want to delete this photo? This action cannot be undone.</p>
+                      </div>
+                      <div className="flex space-x-3">
+                          <button 
+                              onClick={() => setPostToDelete(null)}
+                              className="flex-1 py-3 rounded-xl font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          >
+                              Cancel
+                          </button>
+                          <button 
+                              onClick={confirmDelete}
+                              className="flex-1 py-3 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/30 transition-colors"
+                          >
+                              Delete
+                          </button>
+                      </div>
+                  </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
       </Layout>
     </Router>
   );

@@ -98,6 +98,7 @@ const StoryTray: React.FC<StoryTrayProps> = ({ stories, currentUser, onAddStory,
       setPendingPreview(null);
       setNewCaption('');
       setNewLink('');
+      setNewLabel('Get Offer'); // Reset label to default
     }
   };
 
@@ -314,11 +315,11 @@ const StoryTray: React.FC<StoryTrayProps> = ({ stories, currentUser, onAddStory,
                <h3 className="font-bold">New Story</h3>
                <button onClick={handleUpload} className="text-brand-500 font-bold">Share</button>
             </div>
-            <div className="flex-1 relative bg-gray-900 flex items-center justify-center">
+            <div className="flex-1 relative bg-gray-900 flex items-center justify-center overflow-hidden">
                {pendingFile.type.startsWith('video') ? (
-                  <video src={pendingPreview} className="max-h-full max-w-full" controls />
+                  <video src={pendingPreview} className="max-h-full max-w-full object-contain" controls />
                ) : (
-                  <img src={pendingPreview} className="max-h-full max-w-full" />
+                  <img src={pendingPreview} className="max-h-full max-w-full object-contain" />
                )}
             </div>
             <div className="p-4 bg-gray-900 text-white space-y-3 pb-safe-area">
@@ -330,27 +331,46 @@ const StoryTray: React.FC<StoryTrayProps> = ({ stories, currentUser, onAddStory,
                  onChange={e => setNewCaption(e.target.value)}
                />
                
-               {/* Restored Affiliate Inputs */}
-               <div className="bg-gray-800 rounded-xl p-3">
-                   <div className="flex items-center space-x-2 text-brand-400 mb-2 font-semibold text-xs uppercase tracking-wide">
+               {/* Improved Affiliate Inputs */}
+               <div className="bg-gray-800 rounded-xl p-3 space-y-3">
+                   <div className="flex items-center space-x-2 text-brand-400 font-semibold text-xs uppercase tracking-wide">
                         <ShoppingBag className="w-3 h-3" />
                         <span>Add Affiliate Deal</span>
                    </div>
-                   <div className="flex space-x-2">
-                      <input 
-                        type="url" 
-                        placeholder="Link (https://...)" 
-                        className="flex-1 bg-gray-900/50 rounded-lg p-2 text-sm outline-none border border-transparent focus:border-gray-600 transition-colors"
-                        value={newLink}
-                        onChange={e => setNewLink(e.target.value)}
-                      />
+                   
+                   <div className="space-y-2">
                        <input 
-                        type="text" 
-                        placeholder="Label" 
-                        className="w-24 bg-gray-900/50 rounded-lg p-2 text-sm outline-none border border-transparent focus:border-gray-600 transition-colors"
-                        value={newLabel}
-                        onChange={e => setNewLabel(e.target.value)}
-                      />
+                            type="url" 
+                            placeholder="Paste product link here..." 
+                            className="w-full bg-gray-900/50 rounded-lg p-2.5 text-sm outline-none border border-transparent focus:border-gray-600 transition-colors placeholder-gray-500"
+                            value={newLink}
+                            onChange={e => setNewLink(e.target.value)}
+                        />
+                        
+                        {/* Only show Label input and Preview if link is present */}
+                        {newLink && (
+                            <div className="flex items-center space-x-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="flex-1">
+                                    <label className="text-[10px] text-gray-400 ml-1 mb-1 block">Button Text</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="e.g. Get Offer" 
+                                        className="w-full bg-gray-900/50 rounded-lg p-2.5 text-sm outline-none border border-transparent focus:border-gray-600 transition-colors text-center font-medium"
+                                        value={newLabel}
+                                        onChange={e => setNewLabel(e.target.value)}
+                                    />
+                                </div>
+                                
+                                {/* Live Preview of the Button */}
+                                <div className="flex-1 flex flex-col items-center justify-center">
+                                    <label className="text-[10px] text-gray-400 mb-1 block">Button Preview</label>
+                                    <div className="bg-white text-black px-4 py-2 rounded-full font-bold text-xs flex items-center space-x-1 shadow-sm opacity-90">
+                                        <ShoppingBag className="w-3 h-3" />
+                                        <span>{newLabel || 'Shop Now'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                    </div>
                </div>
             </div>
