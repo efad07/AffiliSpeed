@@ -47,13 +47,22 @@ export interface Story {
   viewed: boolean;
 }
 
+export interface Group {
+  id: string;
+  name: string;
+  avatar: string;
+  members: string[]; // Array of User IDs
+  adminId: string;
+  created_at: number;
+}
+
 export interface Message {
   id: string;
   senderId: string;
-  receiverId: string;
+  receiverId: string; // Can be a User ID or Group ID
   text: string;
-  mediaUrl?: string; // New: For photo/video URL
-  mediaType?: 'image' | 'video'; // New: Type of media
+  mediaUrl?: string; 
+  mediaType?: 'image' | 'video';
   timestamp: number;
   isRead: boolean;
   isEdited?: boolean;

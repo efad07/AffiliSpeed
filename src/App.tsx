@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe, AlertTriangle, RefreshCcw, Users, UserPlus as UserPlusIcon, Film } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe, AlertTriangle, RefreshCcw, Users, UserPlus as UserPlusIcon, Film, Bell, Settings, Bookmark, Shield, HelpCircle, ChevronRight, Menu } from 'lucide-react';
 import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS, INITIAL_MESSAGES, MOCK_GROUPS, MOCK_SPARKS } from './constants';
 import { Post, User as UserType, Story, Comment, Message, Group } from './types';
 import PostCard from './components/PostCard';
@@ -36,6 +36,113 @@ const LoadingScreen = () => (
     <h2 className="mt-4 text-lg font-bold text-gray-900 dark:text-white tracking-tight animate-pulse">AffiliSpeed</h2>
   </div>
 );
+
+// -- Mobile Menu Component --
+const MobileMenu = ({ isOpen, onClose, navItems, theme, toggleTheme, onLogout }: any) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm sm:hidden"
+          />
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed top-0 left-0 bottom-0 w-[80%] max-w-xs bg-white dark:bg-gray-900 z-50 shadow-2xl overflow-y-auto sm:hidden border-r border-gray-200 dark:border-gray-800"
+          >
+             <div className="p-6 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-gradient-to-tr from-brand-500 to-purple-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                        <Zap className="w-5 h-5 fill-current" />
+                    </div>
+                    <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">AffiliSpeed</span>
+                </div>
+                <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400">
+                    <X className="w-6 h-6" />
+                </button>
+             </div>
+
+             <nav className="px-4 py-6 space-y-1">
+                {navItems.map((item: any) => (
+                    <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={onClose}
+                        className={`flex items-center space-x-4 px-4 py-3.5 rounded-xl transition-all duration-200 ${window.location.hash.endsWith(item.path) ? 'bg-brand-50 dark:bg-brand-900/10 text-brand-600 dark:text-brand-400 font-bold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                    >
+                        <item.icon className="w-5 h-5" />
+                        <span>{item.label}</span>
+                        {item.badge > 0 && <span className="ml-auto bg-brand-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{item.badge}</span>}
+                    </Link>
+                ))}
+             </nav>
+
+             <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 space-y-2 pb-safe-area">
+                <button 
+                    onClick={toggleTheme}
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl w-full text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-sm bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
+                >
+                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                    <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                </button>
+                <button 
+                    onClick={() => { onClose(); onLogout(); }}
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl w-full text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                >
+                    <LogOut className="w-5 h-5" />
+                    <span>Log Out</span>
+                </button>
+             </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// -- Notification Toast Component --
+const NotificationToast = ({ notification, onClose, onClick }: { notification: any, onClose: () => void, onClick: () => void }) => {
+  return (
+    <div className="fixed top-4 left-0 right-0 z-[100] flex justify-center px-4 pointer-events-none">
+      <motion.div
+        initial={{ y: -100, opacity: 0, scale: 0.9 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: -100, opacity: 0, scale: 0.9 }}
+        className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-2xl rounded-2xl p-4 w-full max-w-sm pointer-events-auto cursor-pointer"
+        onClick={onClick}
+      >
+        <div className="flex items-start space-x-3">
+          <div className="relative">
+            <img src={notification.sender.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+            <div className="absolute -bottom-1 -right-1 bg-brand-500 text-white rounded-full p-0.5 border-2 border-white dark:border-gray-900">
+              <MessageCircle className="w-3 h-3" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">{notification.sender.name}</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{notification.text}</p>
+          </div>
+          <div className="flex flex-col items-end space-y-1">
+             <span className="text-[10px] text-gray-400">Now</span>
+             <button 
+                onClick={(e) => { e.stopPropagation(); onClose(); }} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+             >
+                <X className="w-4 h-4" />
+             </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 // -- Share Modal Component --
 
@@ -100,7 +207,7 @@ const ShareSheet = ({ isOpen, onClose, user }: { isOpen: boolean; onClose: () =>
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
-        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-6 relative z-10 pointer-events-auto shadow-2xl border-t border-gray-100 dark:border-gray-800"
+        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-6 relative z-10 pointer-events-auto shadow-2xl border-t border-gray-100 dark:border-gray-800 mx-auto"
       >
         <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-6 sm:hidden" />
         
@@ -149,6 +256,49 @@ const ShareSheet = ({ isOpen, onClose, user }: { isOpen: boolean; onClose: () =>
             <Share2 className="w-4 h-4" />
             <span>More Options</span>
           </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// -- Settings Modal Component --
+
+const SettingsSheet = ({ isOpen, onClose, onLogout, toggleTheme, isDarkMode }: any) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-none">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
+      <motion.div 
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-6 relative z-10 pointer-events-auto shadow-2xl border-t border-gray-100 dark:border-gray-800 mx-auto"
+      >
+        <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-6 sm:hidden" />
+        <h3 className="text-xl font-bold dark:text-white mb-6 text-center">Settings</h3>
+        
+        <div className="space-y-4">
+            <button 
+                onClick={toggleTheme}
+                className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+                <div className="flex items-center space-x-3 text-gray-900 dark:text-white">
+                    {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                    <span className="font-semibold">Dark Mode</span>
+                </div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${isDarkMode ? 'bg-brand-600' : 'bg-gray-300'}`}>
+                    <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${isDarkMode ? 'translate-x-6' : ''}`} />
+                </div>
+            </button>
+
+            <button 
+                onClick={() => { onClose(); onLogout(); }}
+                className="w-full py-3.5 bg-red-50 dark:bg-red-900/10 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors"
+            >
+                <LogOut className="w-5 h-5" />
+                <span>Log Out</span>
+            </button>
         </div>
       </motion.div>
     </div>
@@ -237,9 +387,35 @@ const ForgotPasswordScreen = () => {
 
 // -- Pages -- 
 
-const Feed = ({ posts, stories, onLike, onDelete, onEdit, onComment, onShare, onAddStory, onDeleteStory, onEditStory, onReplyToStory, currentUser }: any) => {
+const Feed = ({ posts, stories, onLike, onDelete, onEdit, onComment, onShare, onAddStory, onDeleteStory, onEditStory, onReplyToStory, currentUser, unreadCount, onOpenMenu }: any) => {
   return (
     <div className="max-w-xl mx-auto pb-20 px-0 sm:px-4">
+      {/* Branding Header with Shop Icon and Menu Button */}
+      <div className="flex items-center justify-between px-4 py-3 sticky top-0 bg-white/90 dark:bg-black/90 backdrop-blur-md z-30 border-b border-gray-100 dark:border-gray-800 transition-colors duration-200 sm:rounded-b-xl">
+         <div className="flex items-center space-x-3">
+            {/* Menu Button for Mobile */}
+            <button onClick={onOpenMenu} className="sm:hidden text-gray-900 dark:text-white p-1 -ml-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+               <Menu className="w-7 h-7" />
+            </button>
+            
+            <div className="flex items-center space-x-2">
+                <div className="w-9 h-9 bg-gradient-to-tr from-brand-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-500/20 transform hover:scale-105 transition-transform duration-200">
+                <Zap className="w-5 h-5 fill-current" />
+                </div>
+                <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white font-sans hidden xs:block">AffiliSpeed</span>
+            </div>
+         </div>
+         <div className="flex items-center space-x-4">
+            <button className="text-gray-900 dark:text-white hover:text-red-500 transition-colors">
+               <Heart className="w-7 h-7" />
+            </button>
+            {/* Shop icon now in header instead of Messages */}
+            <Link to="/shop" className="text-gray-900 dark:text-white hover:text-brand-500 transition-colors">
+               <ShoppingBag className="w-7 h-7" />
+            </Link>
+         </div>
+      </div>
+
       <div className="pt-2">
         <StoryTray stories={stories} currentUser={currentUser} onAddStory={onAddStory} onDeleteStory={onDeleteStory} onEditStory={onEditStory} onReplyToStory={onReplyToStory} />
       </div>
@@ -251,8 +427,7 @@ const Feed = ({ posts, stories, onLike, onDelete, onEdit, onComment, onShare, on
 };
 
 // -- Sparks Page Component --
-const Sparks = ({ sparks, onLike }: { sparks: Post[], onLike: (id: string) => void }) => {
-  // We use Intersection Observer to detect which Spark is currently in view
+const Sparks = ({ sparks, onLike, onOpenMenu }: { sparks: Post[], onLike: (id: string) => void, onOpenMenu: () => void }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -272,43 +447,72 @@ const Sparks = ({ sparks, onLike }: { sparks: Post[], onLike: (id: string) => vo
   }, [activeIndex]);
 
   return (
-    <div 
-      ref={containerRef}
-      className="h-[calc(100vh-56px)] sm:h-screen w-full bg-black overflow-y-scroll snap-y snap-mandatory no-scrollbar"
-    >
-      {sparks.map((spark, index) => (
-        <SparkCard 
-          key={spark.id} 
-          post={spark} 
-          isActive={index === activeIndex}
-          onLike={onLike}
-          onComment={() => console.log('Comment on spark', spark.id)}
-          onShare={() => console.log('Share spark', spark.id)}
-        />
-      ))}
+    <div className="flex justify-center w-full bg-gray-900 dark:bg-black relative">
+      {/* Floating Menu Button for Mobile */}
+      <div className="absolute top-4 left-4 z-40 sm:hidden">
+         <button 
+            onClick={onOpenMenu} 
+            className="p-2 rounded-full bg-black/30 backdrop-blur-md text-white hover:bg-black/50 transition-colors"
+         >
+            <Menu className="w-6 h-6" />
+         </button>
+      </div>
+
+      <div 
+        ref={containerRef}
+        className="h-[calc(100dvh-56px)] w-full sm:max-w-md sm:border-x sm:border-gray-800 bg-black overflow-y-scroll snap-y snap-mandatory no-scrollbar relative shadow-2xl"
+      >
+        {sparks.map((spark, index) => (
+          <SparkCard 
+            key={spark.id} 
+            post={spark} 
+            isActive={index === activeIndex}
+            onLike={onLike}
+            onComment={() => console.log('Comment on spark', spark.id)}
+            onShare={() => console.log('Share spark', spark.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 };
 
-const Explore = ({ posts }: { posts: Post[] }) => {
+const Explore = ({ posts, onOpenMenu }: { posts: Post[], onOpenMenu: () => void }) => {
   const [term, setTerm] = useState('');
   const displayedPosts = term ? posts.filter(p => p.caption.toLowerCase().includes(term.toLowerCase()) || p.user.handle.toLowerCase().includes(term.toLowerCase())) : posts;
   return (
-    <div className="max-w-xl mx-auto pb-20 px-4">
-      <div className="sticky top-14 bg-gray-50 dark:bg-gray-900 z-10 py-3 transition-colors duration-200">
-        <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" /><input type="text" placeholder="Search users, tags, products..." className="w-full bg-gray-200 dark:bg-gray-800 border-none rounded-xl py-2.5 pl-10 pr-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none text-sm" value={term} onChange={(e) => setTerm(e.target.value)} /></div>
+    <div className="max-w-2xl mx-auto pb-20 px-4">
+      <div className="sticky top-0 bg-gray-50 dark:bg-gray-900 z-20 py-3 transition-colors duration-200">
+        <div className="flex items-center space-x-3">
+            {/* Menu Button for Mobile */}
+            <button onClick={onOpenMenu} className="sm:hidden text-gray-900 dark:text-white p-2 -ml-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800">
+               <Menu className="w-6 h-6" />
+            </button>
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input type="text" placeholder="Search users, tags, products..." className="w-full bg-gray-200 dark:bg-gray-800 border-none rounded-xl py-2.5 pl-10 pr-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 outline-none text-sm" value={term} onChange={(e) => setTerm(e.target.value)} />
+            </div>
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-1 mt-1">{displayedPosts.map((post) => (<div key={post.id} className="relative aspect-square group cursor-pointer overflow-hidden"><img src={post.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" loading="lazy" />{post.type === 'video' && (<div className="absolute top-2 right-2"><svg className="w-5 h-5 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>)}</div>))}</div>
     </div>
   );
 };
 
-const Shop = ({ posts }: { posts: Post[] }) => {
+const Shop = ({ posts, onOpenMenu }: { posts: Post[], onOpenMenu: () => void }) => {
   const deals = posts.filter(p => p.affiliateLink);
   return (
-    <div className="max-w-xl mx-auto pb-20 px-4 min-h-screen">
-       <div className="sticky top-14 bg-gray-50 dark:bg-black z-10 py-3 mb-2 bg-opacity-95 backdrop-blur-sm transition-colors duration-200"><h1 className="text-2xl font-bold dark:text-white flex items-center">Trending Deals <span className="ml-2 text-xl">🔥</span></h1></div>
-      <div className="grid grid-cols-2 gap-3">{deals.map(post => (<a key={post.id} href={post.affiliateLink} target="_blank" rel="noopener noreferrer" className="block bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow"><div className="aspect-square relative bg-gray-100 dark:bg-gray-800"><img src={post.url} className="w-full h-full object-cover" loading="lazy" /><div className="absolute bottom-2 left-2 bg-brand-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">{post.affiliateLabel || 'GET DEAL'}</div>{post.type === 'video' && (<div className="absolute top-2 right-2"><svg className="w-4 h-4 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>)}</div><div className="p-3"><div className="flex items-start justify-between"><p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-snug flex-1 mr-2">{post.caption}</p></div><div className="mt-3 flex items-center justify-between border-t border-gray-50 dark:border-gray-800 pt-2"><div className="flex items-center space-x-1.5"><img src={post.user.avatar} className="w-4 h-4 rounded-full object-cover" /><span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[80px]">{post.user.handle}</span></div><div className="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-full"><ExternalLink className="w-3 h-3 text-brand-600 dark:text-brand-400" /></div></div></div></a>))}</div>
+    <div className="max-w-2xl mx-auto pb-20 px-4 min-h-screen">
+       <div className="sticky top-0 bg-gray-50 dark:bg-black z-20 py-3 mb-2 bg-opacity-95 backdrop-blur-sm transition-colors duration-200">
+           <div className="flex items-center space-x-3">
+               {/* Menu Button for Mobile */}
+                <button onClick={onOpenMenu} className="sm:hidden text-gray-900 dark:text-white p-2 -ml-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800">
+                    <Menu className="w-6 h-6" />
+                </button>
+                <h1 className="text-2xl font-bold dark:text-white flex items-center">Trending Deals <span className="ml-2 text-xl">🔥</span></h1>
+           </div>
+       </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{deals.map(post => (<a key={post.id} href={post.affiliateLink} target="_blank" rel="noopener noreferrer" className="block bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow transform hover:-translate-y-1"><div className="aspect-square relative bg-gray-100 dark:bg-gray-800"><img src={post.url} className="w-full h-full object-cover" loading="lazy" /><div className="absolute bottom-2 left-2 bg-brand-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">{post.affiliateLabel || 'GET DEAL'}</div>{post.type === 'video' && (<div className="absolute top-2 right-2"><svg className="w-4 h-4 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>)}</div><div className="p-3"><div className="flex items-start justify-between"><p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-snug flex-1 mr-2">{post.caption}</p></div><div className="mt-3 flex items-center justify-between border-t border-gray-50 dark:border-gray-800 pt-2"><div className="flex items-center space-x-1.5"><img src={post.user.avatar} className="w-4 h-4 rounded-full object-cover" /><span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[80px]">{post.user.handle}</span></div><div className="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-full"><ExternalLink className="w-3 h-3 text-brand-600 dark:text-brand-400" /></div></div></div></a>))}</div>
     </div>
   );
 };
@@ -348,7 +552,7 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
   );
 };
 
-// -- Modified Inbox Component --
+// -- Inbox Component --
 
 const Inbox = ({ messages, users, currentUser, groups, onCreateGroup }: { messages: Message[], users: UserType[], currentUser: UserType, groups: Group[], onCreateGroup: (name: string, members: string[]) => void }) => {
     const navigate = useNavigate();
@@ -634,7 +838,7 @@ const EditMessageModal = ({ message, onSave, onCancel }: any) => {
   );
 };
 
-// -- Modified ChatRoom Component --
+// -- ChatRoom Component --
 
 const ChatRoom = ({ messages, users, groups, currentUser, onSend, onEdit, onToggleLike }: { messages: Message[], users: UserType[], groups: Group[], currentUser: UserType, onSend: (text: string, receiverId: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void, onEdit: (id: string, text: string) => void, onToggleLike: (id: string) => void }) => {
     const { userId } = useParams(); // This can be userId OR groupId
@@ -663,8 +867,6 @@ const ChatRoom = ({ messages, users, groups, currentUser, onSend, onEdit, onTogg
     const canvasRef = useRef<HTMLCanvasElement>(null);
     
     // Filter messages for this chat
-    // If direct: (me->him OR him->me)
-    // If group: receiverId === groupId
     const chatMessages = messages.filter(m => {
         if (activeGroup) {
             return m.receiverId === activeGroup.id;
@@ -1231,7 +1433,7 @@ const NetworkList = ({ title, users, followingIds, onToggleFollow }: any) => {
   );
 };
 
-const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout, isAuthChecking }: any) => {
+const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout, isAuthChecking, unreadCount, isMobileMenuOpen, closeMobileMenu }: any) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -1249,16 +1451,17 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout, isAut
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
-    { icon: Film, label: 'Sparks', path: '/sparks' }, // Changed Search to Sparks for this demo or added it
+    { icon: Film, label: 'Sparks', path: '/sparks' },
     { icon: Search, label: 'Explore', path: '/search' },
     { icon: PlusSquare, label: 'Create', path: '/upload' },
     { icon: ShoppingBag, label: 'Deals', path: '/shop' },
-    { icon: MessageCircle, label: 'Messages', path: '/messages' },
+    { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadCount },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 
   return (
     <div className={theme}>
+      <MobileMenu isOpen={isMobileMenuOpen} onClose={closeMobileMenu} navItems={navItems} theme={theme} toggleTheme={toggleTheme} onLogout={onLogout} />
       <div className="min-h-screen bg-gray-50 dark:bg-black text-gray-900 dark:text-white transition-colors duration-200 flex flex-col sm:flex-row">
         {/* Desktop Sidebar */}
         <aside className="hidden sm:flex flex-col w-64 fixed h-full bg-white dark:bg-black border-r border-gray-100 dark:border-gray-800 z-30">
@@ -1278,7 +1481,10 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout, isAut
                   to={item.path}
                   className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive ? 'bg-brand-50 dark:bg-brand-900/10 text-brand-600 dark:text-brand-400 font-bold' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white'}`}
                 >
-                  <item.icon className={`w-6 h-6 transition-transform group-hover:scale-110 ${isActive ? 'fill-current' : ''}`} />
+                  <div className="relative">
+                    <item.icon className={`w-6 h-6 transition-transform group-hover:scale-110 ${isActive ? 'fill-current' : ''}`} />
+                    {item.badge > 0 && <span className="absolute -top-1 -right-1 bg-brand-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">{item.badge}</span>}
+                  </div>
                   <span>{item.label}</span>
                 </Link>
               );
@@ -1337,12 +1543,55 @@ const App = () => {
   const [groups, setGroups] = useState<Group[]>(MOCK_GROUPS); 
   const [followingIds, setFollowingIds] = useState<string[]>(['u1', 'u3']);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notification, setNotification] = useState<{ message: Message, sender: UserType } | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       setTheme('dark');
     }
+    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
   }, []);
+
+  useEffect(() => {
+      const timer = setTimeout(() => {
+          const fakeIncomingMsg: Message = {
+              id: `m_sim_${Date.now()}`,
+              senderId: 'u1', 
+              receiverId: currentUser.id,
+              text: "Hey! Just saw you liked my post. Want to collab on a video? 🎥",
+              timestamp: Date.now(),
+              isRead: false
+          };
+          setMessages(prev => [...prev, fakeIncomingMsg]);
+      }, 5000);
+      return () => clearTimeout(timer);
+  }, [currentUser.id]);
+
+  useEffect(() => {
+      const count = messages.filter(m => m.receiverId === currentUser.id && !m.isRead).length;
+      setUnreadCount(count);
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && lastMsg.receiverId === currentUser.id && lastMsg.senderId !== currentUser.id && !lastMsg.isRead) {
+          const sender = users.find(u => u.id === lastMsg.senderId);
+          if (sender) {
+              setNotification({ message: lastMsg, sender });
+              if (audioRef.current) {
+                  audioRef.current.volume = 0.5;
+                  audioRef.current.play().catch(e => console.log("Audio play failed", e));
+              }
+              setTimeout(() => setNotification(null), 4000);
+          }
+      }
+  }, [messages, currentUser.id, users]);
+
+  useEffect(() => {
+      if (!isAuthenticated) return;
+      const channel = supabase.channel('realtime messages').subscribe();
+      return () => { supabase.removeChannel(channel); };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -1385,10 +1634,7 @@ const App = () => {
     const id = postToDelete;
     setPostToDelete(null);
     setPosts(prev => prev.filter(p => p.id !== id));
-    try {
-        const { error } = await supabase.from('posts').delete().eq('id', id);
-        if (error) console.error("Error deleting post:", error);
-    } catch(e) { console.error("Exception deleting post:", e); }
+    try { await supabase.from('posts').delete().eq('id', id); } catch(e) { console.error(e); }
   };
 
   const handleAddStory = (file: File, caption: string, link?: string, label?: string) => {
@@ -1403,7 +1649,6 @@ const App = () => {
 
   const handleDeleteStory = (id: string) => setStories(prev => prev.filter(s => s.id !== id));
   const handleEditStory = (id: string, caption: string) => setStories(prev => prev.map(s => s.id === id ? { ...s, caption } : s));
-  
   const handleReplyToStory = (storyId: string, text: string) => {
       const story = stories.find(s => s.id === storyId);
       if (story) handleSendMsg(`Replied to story: ${text}`, story.userId);
@@ -1430,35 +1675,36 @@ const App = () => {
       setCurrentUser(prev => ({ ...prev, following: isFollowing ? Math.max(0, prev.following - 1) : prev.following + 1 }));
   };
 
-  // Group Creation Logic
   const handleCreateGroup = (name: string, members: string[]) => {
-      const newGroup: Group = {
-          id: `g_${Date.now()}`,
-          name: name,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`,
-          members: [...members, currentUser.id],
-          adminId: currentUser.id,
-          created_at: Date.now()
-      };
+      const newGroup: Group = { id: `g_${Date.now()}`, name: name, avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`, members: [...members, currentUser.id], adminId: currentUser.id, created_at: Date.now() };
       setGroups(prev => [newGroup, ...prev]);
       handleSendMsg(`Created group "${name}"`, newGroup.id);
   };
 
   return (
     <Router>
-      <Layout theme={theme} toggleTheme={toggleTheme} isAuthenticated={isAuthenticated} onLogout={handleLogout} isAuthChecking={isAuthChecking}>
+      <Layout 
+        theme={theme} 
+        toggleTheme={toggleTheme} 
+        isAuthenticated={isAuthenticated} 
+        onLogout={handleLogout} 
+        isAuthChecking={isAuthChecking} 
+        unreadCount={unreadCount}
+        isMobileMenuOpen={isMobileMenuOpen}
+        closeMobileMenu={() => setIsMobileMenuOpen(false)}
+      >
          <Routes>
              <Route path="/login" element={<LoginScreen onLogin={() => setIsAuthenticated(true)} />} />
              <Route path="/signup" element={<SignupScreen onSignup={() => setIsAuthenticated(true)} />} />
              <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-             <Route path="/" element={<Feed posts={posts} stories={stories} onLike={handleLike} onDelete={handleDeletePost} onEdit={(post) => console.log('Edit', post)} onComment={(id) => console.log('Comment', id)} onShare={(id) => console.log('Share', id)} onAddStory={handleAddStory} onDeleteStory={handleDeleteStory} onEditStory={handleEditStory} onReplyToStory={handleReplyToStory} currentUser={currentUser} />} />
-             <Route path="/sparks" element={<Sparks sparks={sparks} onLike={handleSparkLike} />} />
-             <Route path="/search" element={<Explore posts={posts} />} />
-             <Route path="/shop" element={<Shop posts={posts} />} />
+             <Route path="/" element={<Feed posts={posts} stories={stories} onLike={handleLike} onDelete={handleDeletePost} onEdit={(post) => console.log('Edit', post)} onComment={(id) => console.log('Comment', id)} onShare={(id) => console.log('Share', id)} onAddStory={handleAddStory} onDeleteStory={handleDeleteStory} onEditStory={handleEditStory} onReplyToStory={handleReplyToStory} currentUser={currentUser} unreadCount={unreadCount} onOpenMenu={() => setIsMobileMenuOpen(true)} />} />
+             <Route path="/sparks" element={<Sparks sparks={sparks} onLike={handleSparkLike} onOpenMenu={() => setIsMobileMenuOpen(true)} />} />
+             <Route path="/search" element={<Explore onOpenMenu={() => setIsMobileMenuOpen(true)} posts={posts} />} />
+             <Route path="/shop" element={<Shop onOpenMenu={() => setIsMobileMenuOpen(true)} posts={posts} />} />
              <Route path="/upload" element={<Upload onPost={handlePost} currentUser={currentUser} />} />
-             <Route path="/profile" element={<UserProfile currentUser={currentUser} posts={posts} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
-             <Route path="/profile/:id" element={<UserProfile currentUser={currentUser} posts={posts} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
-             <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateProfile} />} />
+             <Route path="/profile" element={<UserProfile currentUser={currentUser} posts={posts} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} onLogout={handleLogout} toggleTheme={toggleTheme} isDarkMode={theme === 'dark'} />} />
+             <Route path="/profile/:id" element={<UserProfile currentUser={currentUser} posts={posts} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} onLogout={handleLogout} toggleTheme={toggleTheme} isDarkMode={theme === 'dark'} />} />
+             <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateProfile} onLogout={handleLogout} toggleTheme={toggleTheme} isDarkMode={theme === 'dark'} />} />
              
              <Route path="/messages" element={<Inbox messages={messages} users={users} groups={groups} currentUser={currentUser} onCreateGroup={handleCreateGroup} />} />
              <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={users} groups={groups} currentUser={currentUser} onSend={handleSendMsg} onEdit={handleEditMessage} onToggleLike={handleToggleMessageLike} />} />
@@ -1467,7 +1713,21 @@ const App = () => {
              <Route path="/profile/following" element={<NetworkList title="Following" users={MOCK_USERS} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
              <Route path="*" element={<Navigate to="/" replace />} />
          </Routes>
-         <AnimatePresence>{postToDelete && (<div className="fixed inset-0 z-[70] flex items-center justify-center px-4"><div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPostToDelete(null)} /><motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700 relative z-10"><div className="flex flex-col items-center text-center mb-6"><div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4"><AlertTriangle className="w-6 h-6" /></div><h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete Post?</h3><p className="text-gray-500 dark:text-gray-400 text-sm">Are you sure you want to delete this photo? This action cannot be undone.</p></div><div className="flex space-x-3"><button onClick={() => setPostToDelete(null)} className="flex-1 py-3 rounded-xl font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button><button onClick={confirmDelete} className="flex-1 py-3 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/30 transition-colors">Delete</button></div></motion.div></div>)}</AnimatePresence>
+         
+         <AnimatePresence>
+            {notification && (
+                <NotificationToast 
+                    notification={notification} 
+                    onClose={() => setNotification(null)}
+                    onClick={() => {
+                        setNotification(null);
+                        window.location.hash = `#/messages/${notification.sender.id}`;
+                    }}
+                />
+            )}
+
+            {postToDelete && (<div className="fixed inset-0 z-[70] flex items-center justify-center px-4"><div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPostToDelete(null)} /><motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700 relative z-10"><div className="flex flex-col items-center text-center mb-6"><div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4"><AlertTriangle className="w-6 h-6" /></div><h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete Post?</h3><p className="text-gray-500 dark:text-gray-400 text-sm">Are you sure you want to delete this photo? This action cannot be undone.</p></div><div className="flex space-x-3"><button onClick={() => setPostToDelete(null)} className="flex-1 py-3 rounded-xl font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button><button onClick={confirmDelete} className="flex-1 py-3 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/30 transition-colors">Delete</button></div></motion.div></div>)}
+         </AnimatePresence>
       </Layout>
     </Router>
   );

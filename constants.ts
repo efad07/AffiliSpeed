@@ -1,4 +1,4 @@
-import { User, Post, Story, Message } from './types';
+import { User, Post, Story, Message, Group } from './types';
 
 export const CURRENT_USER: User = {
   id: 'u_me',
@@ -6,8 +6,8 @@ export const CURRENT_USER: User = {
   handle: 'alex_c',
   avatar: 'https://picsum.photos/seed/alex/150/150',
   bio: 'Tech enthusiast & affiliate marketer 🚀 Sharing the best deals!',
-  followers: 3, // Matches MOCK_USERS length
-  following: 2, // Matches initial followingIds in App.tsx
+  followers: 3, 
+  following: 2, 
   isVerified: true,
 };
 
@@ -42,6 +42,17 @@ export const MOCK_USERS: User[] = [
   }
 ];
 
+export const MOCK_GROUPS: Group[] = [
+  {
+    id: 'g1',
+    name: 'Affiliate Squad 🚀',
+    avatar: 'https://ui-avatars.com/api/?name=Affiliate+Squad&background=0D9488&color=fff',
+    members: ['u_me', 'u1', 'u2'],
+    adminId: 'u_me',
+    created_at: Date.now() - 10000000
+  }
+];
+
 export const MOCK_STORIES: Story[] = MOCK_USERS.map((user, i) => ({
   id: `s_${i}`,
   userId: user.id,
@@ -52,6 +63,29 @@ export const MOCK_STORIES: Story[] = MOCK_USERS.map((user, i) => ({
   expiresAt: Date.now() + 86400000,
   viewed: false,
 }));
+
+// Separate data for Sparks (Vertical Videos)
+export const MOCK_SPARKS: Post[] = Array.from({ length: 10 }).map((_, i) => {
+  const user = MOCK_USERS[i % MOCK_USERS.length];
+  return {
+    id: `spark_${i}`,
+    userId: user.id,
+    user: user,
+    type: 'video',
+    // Using a vertical-ish video sample or generic video
+    url: i % 2 === 0 
+      ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4' 
+      : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    thumbnail: `https://picsum.photos/seed/spark_thumb${i}/400/800`,
+    caption: `This product is a game changer! 🔥 Spark #${i + 1} #viral #musthave`,
+    affiliateLink: 'https://example.com/product',
+    affiliateLabel: i % 2 === 0 ? 'Grab 50% OFF' : 'View Deal',
+    likes: Math.floor(Math.random() * 5000),
+    comments: [],
+    timestamp: Date.now(),
+    likedByMe: false,
+  };
+});
 
 export const INITIAL_POSTS: Post[] = Array.from({ length: 20 }).map((_, i) => {
   const user = MOCK_USERS[i % MOCK_USERS.length];
@@ -104,6 +138,14 @@ export const INITIAL_MESSAGES: Message[] = [
     receiverId: 'u_me',
     text: 'Collaboration proposal: Check your email! 📧',
     timestamp: Date.now() - 86400000,
+    isRead: true,
+  },
+  {
+    id: 'm5',
+    senderId: 'u1',
+    receiverId: 'g1',
+    text: 'Hey team, anyone tried the new analytics tool?',
+    timestamp: Date.now() - 120000,
     isRead: true,
   }
 ];
