@@ -19,11 +19,22 @@ const SparkCard: React.FC<SparkCardProps> = ({ post, isActive, onLike, onComment
   const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
-    if (isActive && videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(e => console.log("Autoplay prevented", e));
-    } else if (!isActive && videoRef.current) {
-      videoRef.current.pause();
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isActive) {
+      video.currentTime = 0;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          // Ignore errors caused by pausing or unmounting before play completes
+          if (error.name !== 'AbortError') {
+            console.log("Autoplay prevented", error);
+          }
+        });
+      }
+    } else {
+      video.pause();
     }
   }, [isActive]);
 
@@ -50,8 +61,26 @@ const SparkCard: React.FC<SparkCardProps> = ({ post, isActive, onLike, onComment
     setIsMuted(!isMuted);
   };
 
+  const togglePlayback = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+           if (error.name !== 'AbortError') {
+             console.log("Play failed", error);
+           }
+        });
+      }
+    } else {
+      video.pause();
+    }
+  };
+
   return (
-    <div className="relative w-full h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)] bg-black snap-start flex-shrink-0 overflow-hidden">
+    <div className="relative w-full h-full bg-black snap-start flex-shrink-0 overflow-hidden sm:rounded-none">
       {/* Video Layer */}
       <video
         ref={videoRef}
@@ -61,10 +90,7 @@ const SparkCard: React.FC<SparkCardProps> = ({ post, isActive, onLike, onComment
         muted={isMuted}
         playsInline
         onDoubleClick={handleDoubleTap}
-        onClick={(e) => {
-            if (videoRef.current?.paused) videoRef.current.play();
-            else videoRef.current?.pause();
-        }}
+        onClick={togglePlayback}
       />
 
       {/* Double Tap Heart Animation */}
@@ -117,28 +143,28 @@ const SparkCard: React.FC<SparkCardProps> = ({ post, isActive, onLike, onComment
         {/* Right Side: Actions */}
         <div className="flex flex-col items-center space-y-6 mb-4">
            <div className="flex flex-col items-center space-y-1">
-              <button onClick={handleLike} className="p-2 rounded-full bg-black/20 backdrop-blur-sm active:scale-90 transition-transform">
+              <button onClick={handleLike} className="p-2 rounded-full bg-black/20 backdrop-blur-sm active:scale-90 transition-transform hover:bg-black/40">
                  <Heart className={`w-8 h-8 ${liked ? 'text-red-500 fill-current' : 'text-white'}`} />
               </button>
               <span className="text-white text-xs font-medium drop-shadow-md">{likeCount}</span>
            </div>
 
            <div className="flex flex-col items-center space-y-1">
-              <button onClick={() => onComment(post.id)} className="p-2 rounded-full bg-black/20 backdrop-blur-sm active:scale-90 transition-transform">
+              <button onClick={() => onComment(post.id)} className="p-2 rounded-full bg-black/20 backdrop-blur-sm active:scale-90 transition-transform hover:bg-black/40">
                  <MessageCircle className="w-8 h-8 text-white" />
               </button>
               <span className="text-white text-xs font-medium drop-shadow-md">{post.comments.length || 12}</span>
            </div>
 
-           <button onClick={() => onShare(post.id)} className="p-2 rounded-full bg-black/20 backdrop-blur-sm active:scale-90 transition-transform">
+           <button onClick={() => onShare(post.id)} className="p-2 rounded-full bg-black/20 backdrop-blur-sm active:scale-90 transition-transform hover:bg-black/40">
               <Share2 className="w-8 h-8 text-white" />
            </button>
 
-           <button className="p-2 rounded-full bg-black/20 backdrop-blur-sm active:scale-90 transition-transform">
+           <button className="p-2 rounded-full bg-black/20 backdrop-blur-sm active:scale-90 transition-transform hover:bg-black/40">
               <MoreHorizontal className="w-8 h-8 text-white" />
            </button>
            
-           <button onClick={toggleMute} className="p-2 rounded-full bg-black/40 backdrop-blur-md mt-4">
+           <button onClick={toggleMute} className="p-2 rounded-full bg-black/40 backdrop-blur-md mt-4 hover:bg-black/60">
                {isMuted ? <VolumeX className="w-5 h-5 text-white" /> : <Volume2 className="w-5 h-5 text-white" />}
            </button>
         </div>

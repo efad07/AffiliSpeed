@@ -62,7 +62,7 @@ export interface Message {
   receiverId: string; // Can be a User ID or Group ID
   text: string;
   mediaUrl?: string; 
-  mediaType?: 'image' | 'video';
+  mediaType?: 'image' | 'video' | 'audio';
   timestamp: number;
   isRead: boolean;
   isEdited?: boolean;

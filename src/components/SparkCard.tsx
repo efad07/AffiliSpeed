@@ -19,11 +19,22 @@ const SparkCard: React.FC<SparkCardProps> = ({ post, isActive, onLike, onComment
   const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
-    if (isActive && videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(e => console.log("Autoplay prevented", e));
-    } else if (!isActive && videoRef.current) {
-      videoRef.current.pause();
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isActive) {
+      video.currentTime = 0;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          // Ignore errors caused by pausing or unmounting before play completes
+          if (error.name !== 'AbortError') {
+            console.log("Autoplay prevented", error);
+          }
+        });
+      }
+    } else {
+      video.pause();
     }
   }, [isActive]);
 
@@ -50,6 +61,24 @@ const SparkCard: React.FC<SparkCardProps> = ({ post, isActive, onLike, onComment
     setIsMuted(!isMuted);
   };
 
+  const togglePlayback = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+           if (error.name !== 'AbortError') {
+             console.log("Play failed", error);
+           }
+        });
+      }
+    } else {
+      video.pause();
+    }
+  };
+
   return (
     <div className="relative w-full h-full bg-black snap-start flex-shrink-0 overflow-hidden sm:rounded-none">
       {/* Video Layer */}
@@ -61,10 +90,7 @@ const SparkCard: React.FC<SparkCardProps> = ({ post, isActive, onLike, onComment
         muted={isMuted}
         playsInline
         onDoubleClick={handleDoubleTap}
-        onClick={(e) => {
-            if (videoRef.current?.paused) videoRef.current.play();
-            else videoRef.current?.pause();
-        }}
+        onClick={togglePlayback}
       />
 
       {/* Double Tap Heart Animation */}
