@@ -13,6 +13,15 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 
 // -- Icons & UI Components --
 
+const GoogleIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.04-3.71 1.04-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.21.81-.63z" fill="#FBBC05" />
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+  </svg>
+);
+
 const Button = ({ children, onClick, variant = 'primary', className = '', ...props }: any) => {
   const baseStyle = "px-6 py-3.5 rounded-xl font-bold transition-all duration-200 active:scale-[0.98] flex items-center justify-center w-full text-sm tracking-wide";
   const variants = {
@@ -544,6 +553,7 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -555,8 +565,54 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
         setIsLoading(false);
     }, 800);
   };
+
+  const handleSocialLogin = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+        localStorage.setItem('auth', 'true');
+        onLogin();
+        navigate('/');
+        setIsLoading(false);
+    }, 800);
+  };
+
   return (
-    <AuthLayout title="Welcome Back" subtitle="Log in to access your dashboard"><form onSubmit={handleSubmit} className="space-y-5"><InputField label="Email" icon={Mail} type="email" placeholder="name@example.com" value={email} onChange={(e: any) => setEmail(e.target.value)} /><div className="space-y-1.5"><div className="flex justify-between items-center ml-1"><label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Password</label><Link to="/forgot-password" className="text-xs font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">Forgot Password?</Link></div><div className="relative group"><div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-500 transition-colors"><Lock className="h-5 w-5" /></div><input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-11 pr-12 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800" placeholder="Enter your password" required /><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button></div></div><div className="pt-4"><Button type="submit" disabled={isLoading} className="w-full py-4 text-base shadow-lg shadow-brand-500/30">{isLoading ? "Signing in..." : "Sign In"}</Button></div></form><p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">Don't have an account? <Link to="/signup" className="font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">Sign up for free</Link></p></AuthLayout>
+    <AuthLayout title="Welcome Back" subtitle="Log in to access your dashboard">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <InputField label="Email" icon={Mail} type="email" placeholder="name@example.com" value={email} onChange={(e: any) => setEmail(e.target.value)} />
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center ml-1">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Password</label>
+            <Link to="/forgot-password" className="text-xs font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">Forgot Password?</Link>
+          </div>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-500 transition-colors"><Lock className="h-5 w-5" /></div>
+            <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-11 pr-12 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800" placeholder="Enter your password" required />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button>
+          </div>
+        </div>
+        <div className="pt-4">
+          <Button type="submit" disabled={isLoading} className="w-full py-4 text-base shadow-lg shadow-brand-500/30">{isLoading ? "Signing in..." : "Sign In"}</Button>
+        </div>
+      </form>
+      
+      <div className="relative my-8">
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-800"></div></div>
+        <div className="relative flex justify-center text-sm"><span className="px-4 bg-white dark:bg-black text-gray-500">Or continue with</span></div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <button type="button" onClick={handleSocialLogin} className="flex items-center justify-center py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors bg-white dark:bg-black">
+          <GoogleIcon />
+          <span className="ml-2 text-sm font-semibold">Google</span>
+        </button>
+        <button type="button" onClick={handleSocialLogin} className="flex items-center justify-center py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-[#1877F2]/10 transition-colors bg-white dark:bg-black group">
+          <Facebook className="w-5 h-5 text-[#1877F2]" />
+          <span className="ml-2 text-sm font-semibold group-hover:text-[#1877F2]">Facebook</span>
+        </button>
+      </div>
+
+      <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">Don't have an account? <Link to="/signup" className="font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">Sign up for free</Link></p></AuthLayout>
   );
 };
 
@@ -567,6 +623,7 @@ const SignupScreen = ({ onSignup }: { onSignup: () => void }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -578,8 +635,59 @@ const SignupScreen = ({ onSignup }: { onSignup: () => void }) => {
         setIsLoading(false);
     }, 800);
   };
+
+  const handleSocialSignup = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+        localStorage.setItem('auth', 'true');
+        onSignup();
+        navigate('/');
+        setIsLoading(false);
+    }, 800);
+  };
+
   return (
-    <AuthLayout title="Create Account" subtitle="Join the fastest affiliate community"><form onSubmit={handleSubmit} className="space-y-5"><InputField label="Full Name" icon={User} type="text" placeholder="e.g. Alex Creator" value={name} onChange={(e: any) => setName(e.target.value)} /><InputField label="Email" icon={Mail} type="email" placeholder="name@company.com" value={email} onChange={(e: any) => setEmail(e.target.value)} /><div className="space-y-2"><label className="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-1">Password</label><div className="relative group"><div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-500 transition-colors"><Lock className="h-5 w-5" /></div><input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-11 pr-12 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800" placeholder="Create a password" required /><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button></div><div className="flex items-center space-x-2 mt-2"><div className="h-1 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"><div className={`h-full ${password.length > 8 ? 'bg-green-500 w-full' : password.length > 4 ? 'bg-yellow-500 w-1/2' : 'bg-red-500 w-1/6'} transition-all duration-300`} /></div><span className="text-xs text-gray-500">{password.length > 8 ? 'Strong' : 'Weak'}</span></div></div><div className="pt-2"><Button type="submit" disabled={isLoading} className="w-full py-4 text-base shadow-brand-500/40">{isLoading ? "Creating..." : "Create Account"}</Button></div></form><div className="relative my-8"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-800"></div></div><div className="relative flex justify-center text-sm"><span className="px-4 bg-white dark:bg-black text-gray-500">Or sign up with</span></div></div><p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">Already have an account? <Link to="/login" className="font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">Log in</Link></p></AuthLayout>
+    <AuthLayout title="Create Account" subtitle="Join the fastest affiliate community">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <InputField label="Full Name" icon={User} type="text" placeholder="e.g. Alex Creator" value={name} onChange={(e: any) => setName(e.target.value)} />
+        <InputField label="Email" icon={Mail} type="email" placeholder="name@company.com" value={email} onChange={(e: any) => setEmail(e.target.value)} />
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-1">Password</label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-brand-500 transition-colors"><Lock className="h-5 w-5" /></div>
+            <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="block w-full pl-11 pr-12 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800" placeholder="Create a password" required />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button>
+          </div>
+          <div className="flex items-center space-x-2 mt-2">
+            <div className="h-1 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className={`h-full ${password.length > 8 ? 'bg-green-500 w-full' : password.length > 4 ? 'bg-yellow-500 w-1/2' : 'bg-red-500 w-1/6'} transition-all duration-300`} />
+            </div>
+            <span className="text-xs text-gray-500">{password.length > 8 ? 'Strong' : 'Weak'}</span>
+          </div>
+        </div>
+        <div className="pt-2">
+          <Button type="submit" disabled={isLoading} className="w-full py-4 text-base shadow-brand-500/40">{isLoading ? "Creating..." : "Create Account"}</Button>
+        </div>
+      </form>
+      
+      <div className="relative my-8">
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-800"></div></div>
+        <div className="relative flex justify-center text-sm"><span className="px-4 bg-white dark:bg-black text-gray-500">Or sign up with</span></div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <button type="button" onClick={handleSocialSignup} className="flex items-center justify-center py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors bg-white dark:bg-black">
+          <GoogleIcon />
+          <span className="ml-2 text-sm font-semibold">Google</span>
+        </button>
+        <button type="button" onClick={handleSocialSignup} className="flex items-center justify-center py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-[#1877F2]/10 transition-colors bg-white dark:bg-black group">
+          <Facebook className="w-5 h-5 text-[#1877F2]" />
+          <span className="ml-2 text-sm font-semibold group-hover:text-[#1877F2]">Facebook</span>
+        </button>
+      </div>
+
+      <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">Already have an account? <Link to="/login" className="font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">Log in</Link></p>
+    </AuthLayout>
   );
 };
 
@@ -1154,7 +1262,84 @@ const App = () => {
     }
   };
 
-  const handleCreateGroup = (name: string, members: string[]) => { const newGroup = { id: `g_${Date.now()}`, name, avatar: `https://ui-avatars.com/api/?name=${name}`, members: [...members, currentUser.id], adminId: currentUser.id, created_at: Date.now() }; setGroups(prev => [newGroup, ...prev]); };
+  const handleCreateGroup = (name: string, members: string[]) => { 
+      const newGroup: Group = { 
+          id: `g_${Date.now()}`, 
+          name, 
+          avatar: `https://ui-avatars.com/api/?name=${name}`, 
+          members: [
+              { userId: currentUser.id, role: 'admin', joinedAt: Date.now() },
+              ...members.map(id => ({ userId: id, role: 'member', joinedAt: Date.now() } as GroupMember))
+          ], 
+          created_at: Date.now() 
+      }; 
+      setGroups(prev => [newGroup, ...prev]); 
+  };
+
+  const handleGroupAction = (groupId: string, action: 'leave' | 'add_member' | 'remove_member' | 'promote_admin' | 'update_info' | 'set_nickname', payload?: any) => {
+      setGroups(prevGroups => {
+          return prevGroups.map(group => {
+              if (group.id !== groupId) return group;
+
+              switch (action) {
+                  case 'leave':
+                      const remainingMembers = group.members.filter(m => m.userId !== currentUser.id);
+                      if (remainingMembers.length === 0) return null as any; // Delete group
+                      
+                      // If admin left, promote next member
+                      const adminLeft = group.members.find(m => m.userId === currentUser.id)?.role === 'admin';
+                      if (adminLeft && !remainingMembers.some(m => m.role === 'admin')) {
+                          remainingMembers[0].role = 'admin';
+                      }
+                      return { ...group, members: remainingMembers };
+                  
+                  case 'add_member':
+                      if (group.members.some(m => m.userId === payload.userId)) return group;
+                      return { ...group, members: [...group.members, { userId: payload.userId, role: 'member', joinedAt: Date.now() }] };
+
+                  case 'remove_member':
+                      return { ...group, members: group.members.filter(m => m.userId !== payload.userId) };
+
+                  case 'promote_admin':
+                      return { ...group, members: group.members.map(m => m.userId === payload.userId ? { ...m, role: 'admin' } : m) };
+
+                  case 'update_info':
+                      return { ...group, ...payload };
+
+                  case 'set_nickname':
+                      return { ...group, members: group.members.map(m => m.userId === payload.userId ? { ...m, nickname: payload.nickname } : m) };
+
+                  default:
+                      return group;
+              }
+          }).filter(Boolean); // Remove nulls (deleted groups)
+      });
+      
+      // If leaving, navigate away
+      if (action === 'leave') {
+          // Navigation handled in ChatSystem via callback or effect, 
+          // but state update happens here.
+      }
+  };
+
+  const handleDeleteMessage = (messageId: string, forEveryone: boolean) => {
+      setMessages(prev => prev.map(m => {
+          if (m.id !== messageId) return m;
+          if (forEveryone) {
+              return { ...m, deletedForEveryone: true, text: '', mediaUrl: undefined };
+          } else {
+              return { ...m, deletedFor: [...(m.deletedFor || []), currentUser.id] };
+          }
+      }));
+  };
+
+  const handleBlockUser = (userId: string) => {
+      setCurrentUser(prev => ({ ...prev, blockedUsers: [...(prev.blockedUsers || []), userId] }));
+  };
+
+  const handleUnblockUser = (userId: string) => {
+      setCurrentUser(prev => ({ ...prev, blockedUsers: (prev.blockedUsers || []).filter(id => id !== userId) }));
+  };
   
   const handleToggleFollow = (targetUserId: string) => {
       const isFollowing = followingIds.includes(targetUserId);
@@ -1221,8 +1406,8 @@ const App = () => {
              <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateProfile} />} />
              
              {/* New Chat System Routes */}
-             <Route path="/messages" element={<ChatSystem currentUser={currentUser} users={users} messages={messages} groups={groups} onSendMessage={handleSendMessage} />} />
-             <Route path="/messages/:userId" element={<ChatSystem currentUser={currentUser} users={users} messages={messages} groups={groups} onSendMessage={handleSendMessage} />} />
+             <Route path="/messages" element={<ChatSystem currentUser={currentUser} users={users} messages={messages} groups={groups} onSendMessage={handleSendMessage} onCreateGroup={handleCreateGroup} onGroupAction={handleGroupAction} onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onDeleteMessage={handleDeleteMessage} />} />
+             <Route path="/messages/:userId" element={<ChatSystem currentUser={currentUser} users={users} messages={messages} groups={groups} onSendMessage={handleSendMessage} onCreateGroup={handleCreateGroup} onGroupAction={handleGroupAction} onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onDeleteMessage={handleDeleteMessage} />} />
              
              <Route path="*" element={<Navigate to="/" replace />} />
          </Routes>
