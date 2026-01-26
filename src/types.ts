@@ -10,6 +10,7 @@ export interface User {
   isVerified?: boolean;
   isOnline?: boolean;
   lastSeen?: number;
+  blockedUsers?: string[]; // IDs of users blocked by this user
 }
 
 export interface Comment {
@@ -49,12 +50,18 @@ export interface Story {
   viewed: boolean;
 }
 
+export interface GroupMember {
+  userId: string;
+  role: 'admin' | 'member';
+  nickname?: string;
+  joinedAt: number;
+}
+
 export interface Group {
   id: string;
   name: string;
   avatar: string;
-  members: string[]; // Array of User IDs
-  adminId: string;
+  members: GroupMember[]; 
   created_at: number;
 }
 
@@ -73,6 +80,8 @@ export interface Message {
   isEdited?: boolean;
   liked?: boolean;
   replyToId?: string;
+  deletedForEveryone?: boolean;
+  deletedFor?: string[]; // Array of User IDs who deleted this message for themselves
 }
 
 export interface CallSession {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe, AlertTriangle, RefreshCcw, Users, UserPlus as UserPlusIcon, Film, Bell, Settings, Bookmark, Shield, HelpCircle, ChevronRight, Menu, Github, Chrome, Save } from 'lucide-react';
@@ -6,6 +7,7 @@ import { Post, User as UserType, Story, Comment, Message, Group } from './types'
 import PostCard from './components/PostCard';
 import StoryTray from './components/StoryTray';
 import SparkCard from './components/SparkCard';
+import ChatSystem from './components/ChatSystem';
 import { generateSmartCaption } from './services/geminiService';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -305,16 +307,31 @@ const EditProfile = ({ user, onUpdate }: { user: UserType, onUpdate: (u: UserTyp
     const navigate = useNavigate();
     const [name, setName] = useState(user.name);
     const [bio, setBio] = useState(user.bio);
+    const [avatar, setAvatar] = useState(user.avatar);
     const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleSave = () => {
         setIsSaving(true);
         // Simulate API call
         setTimeout(() => {
-            onUpdate({ ...user, name, bio });
+            onUpdate({ ...user, name, bio, avatar });
             setIsSaving(false);
             navigate('/profile');
         }, 500);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (reader.result) {
+                    setAvatar(reader.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     return (
@@ -331,13 +348,28 @@ const EditProfile = ({ user, onUpdate }: { user: UserType, onUpdate: (u: UserTyp
             
             <div className="p-6 space-y-6">
                 <div className="flex flex-col items-center space-y-3">
-                    <div className="relative group cursor-pointer">
-                        <img src={user.avatar} className="w-24 h-24 rounded-full object-cover border-4 border-gray-100 dark:border-gray-800" />
+                    <div 
+                        className="relative group cursor-pointer" 
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        <img src={avatar} className="w-24 h-24 rounded-full object-cover border-4 border-gray-100 dark:border-gray-800" />
                         <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <Camera className="w-8 h-8 text-white" />
                         </div>
                     </div>
-                    <span className="text-brand-600 font-semibold text-sm">Change Profile Photo</span>
+                    <button 
+                        onClick={() => fileInputRef.current?.click()} 
+                        className="text-brand-600 font-semibold text-sm hover:text-brand-700 transition-colors"
+                    >
+                        Change Profile Photo
+                    </button>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={handleFileChange}
+                    />
                 </div>
 
                 <div className="space-y-4">
@@ -362,118 +394,6 @@ const EditProfile = ({ user, onUpdate }: { user: UserType, onUpdate: (u: UserTyp
                 </div>
             </div>
         </div>
-    );
-};
-
-
-// Inbox with Improved Filtering
-const Inbox = ({ messages, users, currentUser, groups, onCreateGroup }: any) => {
-    const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showNewChat, setShowNewChat] = useState(false);
-    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-    const [newGroupName, setNewGroupName] = useState('');
-    const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  
-    const userConversations = users.map((user: any) => {
-      const userMessages = messages.filter((m: any) => 
-        (m.senderId === user.id && m.receiverId === currentUser.id) || 
-        (m.senderId === currentUser.id && m.receiverId === user.id)
-      );
-      userMessages.sort((a: any, b: any) => b.timestamp - a.timestamp);
-      return { id: user.id, user, lastMessage: userMessages[0], unreadCount: userMessages.filter((m: any) => m.receiverId === currentUser.id && !m.isRead).length, type: 'direct' };
-    }).filter((c: any) => c.lastMessage);
-
-    const groupConversations = groups.map((group: any) => {
-        if (!group.members.includes(currentUser.id)) return null;
-        const groupMessages = messages.filter((m: any) => m.receiverId === group.id);
-        groupMessages.sort((a: any, b: any) => b.timestamp - a.timestamp);
-        return { id: group.id, group, lastMessage: groupMessages[0] || { timestamp: group.created_at, text: 'Group created' }, unreadCount: groupMessages.filter((m: any) => m.timestamp > (Date.now() - 86400000) && !m.isRead).length, type: 'group' };
-    }).filter(Boolean);
-
-    const allConversations = [...userConversations, ...groupConversations].sort((a: any, b: any) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
-    const filteredConversations = allConversations.filter((c: any) => c.type === 'direct' ? (c.user.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.user.handle.toLowerCase().includes(searchTerm.toLowerCase())) : c.group.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const handleCreateGroupSubmit = () => { if (!newGroupName.trim() || selectedMembers.length === 0) return; onCreateGroup(newGroupName, selectedMembers); setIsCreatingGroup(false); setNewGroupName(''); setSelectedMembers([]); setShowNewChat(false); };
-    const toggleMemberSelection = (userId: string) => { if (selectedMembers.includes(userId)) setSelectedMembers(prev => prev.filter(id => id !== userId)); else setSelectedMembers(prev => [...prev, userId]); };
-  
-    return (
-      <div className="max-w-xl mx-auto bg-white dark:bg-black min-h-screen pb-20">
-        <div className="flex items-center justify-between px-4 py-3 sticky top-0 bg-white dark:bg-black z-10 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}><ChevronLeft className="w-7 h-7 text-gray-900 dark:text-white -ml-2 mr-1" /><h1 className="font-bold text-xl dark:text-white">{currentUser.handle}</h1></div>
-          <button onClick={() => setShowNewChat(true)} className="text-gray-900 dark:text-white"><Edit2 className="w-6 h-6" /></button>
-        </div>
-        <div className="px-4 mb-4 mt-2"><div className="bg-gray-100 dark:bg-gray-900 rounded-xl flex items-center px-3 py-2"><Search className="w-4 h-4 text-gray-500" /><input type="text" placeholder="Search" className="bg-transparent border-none outline-none text-sm ml-2 w-full text-gray-900 dark:text-white placeholder-gray-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div></div>
-        <div className="flex flex-col"><h2 className="px-4 text-sm font-semibold text-gray-900 dark:text-white mb-2">Messages</h2>
-          {filteredConversations.length === 0 ? <div className="p-10 text-center text-gray-500"><MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" /><p>No messages yet.</p></div> : 
-            filteredConversations.map((convo: any) => (
-              <Link to={`/messages/${convo.id}`} key={convo.id} className="flex items-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
-                  <div className="relative mr-3"><img src={convo.type === 'direct' ? convo.user.avatar : convo.group.avatar} className="w-14 h-14 rounded-full object-cover" />{convo.type === 'group' && <div className="absolute -bottom-1 -right-1 bg-white dark:bg-black rounded-full p-0.5"><div className="bg-brand-500 rounded-full p-1"><Users className="w-3 h-3 text-white"/></div></div>}</div>
-                  <div className="flex-1 min-w-0"><div className="flex justify-between items-center mb-0.5"><h3 className={`text-sm truncate pr-2 ${convo.unreadCount > 0 ? 'font-bold' : 'font-normal'} dark:text-white`}>{convo.type === 'direct' ? convo.user.name : convo.group.name}</h3></div><div className="flex items-center text-sm text-gray-500 dark:text-gray-400"><p className={`truncate max-w-[180px] ${convo.unreadCount > 0 ? 'font-bold text-gray-900 dark:text-white' : ''}`}>{convo.lastMessage?.senderId === currentUser.id ? 'You: ' : ''}{convo.lastMessage?.mediaUrl ? 'Sent a photo' : convo.lastMessage?.text}</p><span className="mx-1">·</span><span className="flex-shrink-0 text-xs">{new Date(convo.lastMessage?.timestamp || 0).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div></div>
-                  {convo.unreadCount > 0 && <div className="ml-2 bg-blue-500 w-2.5 h-2.5 rounded-full"></div>}
-              </Link>
-            ))
-          }
-        </div>
-        <AnimatePresence>
-          {showNewChat && (
-            <motion.div initial={{ opacity: 0, y: "100%" }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: "100%" }} className="fixed inset-0 z-50 bg-white dark:bg-black flex flex-col">
-               <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800"><button onClick={() => { setShowNewChat(false); setIsCreatingGroup(false); }} className="text-gray-900 dark:text-white"><X className="w-6 h-6" /></button><h2 className="font-bold text-lg dark:text-white">{isCreatingGroup ? "New Group" : "New Message"}</h2>{isCreatingGroup ? <button onClick={handleCreateGroupSubmit} disabled={!newGroupName.trim() || selectedMembers.length === 0} className="text-brand-600 font-bold disabled:opacity-50">Create</button> : <div className="w-6" />}</div>
-               <div className="p-4 overflow-y-auto">
-                  {!isCreatingGroup ? <><button onClick={() => setIsCreatingGroup(true)} className="flex items-center space-x-3 p-3 w-full hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl mb-2 text-brand-600"><div className="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center"><Users className="w-6 h-6" /></div><span className="font-bold">Create a New Group</span></button><h3 className="text-sm font-semibold text-gray-500 mb-2">Suggested</h3>{users.filter((u: any) => u.id !== currentUser.id).map((user: any) => (<div key={user.id} onClick={() => { navigate(`/messages/${user.id}`); setShowNewChat(false); }} className="flex items-center space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl cursor-pointer"><img src={user.avatar} className="w-12 h-12 rounded-full object-cover" /><div><p className="font-bold text-gray-900 dark:text-white">{user.name}</p><p className="text-sm text-gray-500">@{user.handle}</p></div></div>))}</> : <div className="space-y-4"><div className="space-y-2"><label className="text-sm font-medium dark:text-gray-300">Group Name</label><input type="text" className="w-full p-3 rounded-xl bg-gray-100 dark:bg-gray-900 border-none outline-none dark:text-white" placeholder="e.g. Besties" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} /></div><div><h3 className="text-sm font-semibold text-gray-500 mb-2">Add Members</h3>{users.filter((u: any) => u.id !== currentUser.id).map((user: any) => { const isSelected = selectedMembers.includes(user.id); return (<div key={user.id} onClick={() => toggleMemberSelection(user.id)} className={`flex items-center space-x-3 p-3 rounded-xl cursor-pointer border ${isSelected ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900'}`}><div className="relative"><img src={user.avatar} className="w-10 h-10 rounded-full object-cover" />{isSelected && <div className="absolute -bottom-1 -right-1 bg-brand-500 text-white rounded-full p-0.5"><Check className="w-3 h-3" /></div>}</div><div className="flex-1"><p className="font-bold text-gray-900 dark:text-white text-sm">{user.name}</p><p className="text-xs text-gray-500">@{user.handle}</p></div></div>); })}</div></div>}
-               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-};
-
-const ChatRoom = ({ messages, users, groups, currentUser, onSend, onEdit, onToggleLike }: any) => {
-    const { userId } = useParams();
-    const navigate = useNavigate();
-    const [text, setText] = useState('');
-    const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const partner = users.find((u: any) => u.id === userId);
-    const activeGroup = groups.find((g: any) => g.id === userId);
-    
-    const chatMessages = messages.filter((m: any) => {
-        if (activeGroup) return m.receiverId === activeGroup.id;
-        else if (partner) return (m.senderId === currentUser.id && m.receiverId === partner.id) || (m.senderId === partner.id && m.receiverId === currentUser.id);
-        return false;
-    }).sort((a: any, b: any) => a.timestamp - b.timestamp);
-  
-    useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [chatMessages.length]);
-    const handleSend = () => { if (text.trim() && userId) { onSend(text, userId); setText(''); } };
-    if (!partner && !activeGroup) return <div>Chat not found</div>;
-    const chatTitle = activeGroup ? activeGroup.name : partner?.name;
-    const chatAvatar = activeGroup ? activeGroup.avatar : partner?.avatar;
-  
-    return (
-      <div className="max-w-xl mx-auto bg-white dark:bg-black h-screen flex flex-col relative">
-         <div className="flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-black z-10">
-            <button onClick={() => navigate('/messages')} className="mr-4 text-gray-900 dark:text-white"><ChevronLeft className="w-7 h-7" /></button>
-            <div className="flex items-center space-x-3 flex-1">
-               <img src={chatAvatar} className="w-8 h-8 rounded-full object-cover" />
-               <div className="flex flex-col"><h2 className="font-bold text-sm dark:text-white leading-none mb-0.5">{chatTitle}</h2><p className="text-[10px] text-gray-500">Active now</p></div>
-            </div>
-         </div>
-         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white dark:bg-black" ref={scrollRef}>
-            {chatMessages.map((msg: any) => {
-              const isMe = msg.senderId === currentUser.id;
-              return (<div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-1`}>
-                   <div className={`relative text-[15px] leading-snug rounded-2xl px-4 py-2 ${isMe ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white'}`}>{msg.text}</div>
-              </div>);
-            })}
-         </div>
-         <div className="p-3 bg-white dark:bg-black border-t border-gray-100 dark:border-gray-800 sticky bottom-0 z-20 pb-safe-area">
-             <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-900 rounded-full px-4 py-2">
-                 <input type="text" className="flex-1 bg-transparent border-none outline-none text-sm py-2 dark:text-white" placeholder="Message..." value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} />
-                 {text.trim() && <button onClick={handleSend} className="text-brand-600 font-semibold text-sm">Send</button>}
-             </div>
-         </div>
-      </div>
     );
 };
 
@@ -536,10 +456,10 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
     if (!preview || !file) return;
     setLoading(true);
     try {
-      let secureUrl = preview; // Default to local preview if upload fails/skipped
+      let secureUrl = preview; 
       
-      // Attempt Cloudinary upload, but fallback gracefully if it fails (simulating "no backend" requirement partially)
       try {
+          // Cloudinary fallback
           const formData = new FormData(); formData.append('file', file); formData.append('upload_preset', 'oxh9k9eo'); formData.append('cloud_name', 'dgdvvnnnj');
           const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/dgdvvnnnj/auto/upload', { method: 'POST', body: formData });
           if (cloudinaryRes.ok) {
@@ -552,7 +472,6 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
 
       const mediaType = file.type.startsWith('video') ? 'video' : 'image';
       
-      // Mock Post Creation (No Supabase)
       const newPostData: Post = { 
           id: `p_${Date.now()}`, 
           userId: currentUser.id, 
@@ -568,7 +487,6 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
           likedByMe: false 
       };
       
-      // Simulate network delay
       setTimeout(() => {
           onPost(newPostData); 
           navigate('/');
@@ -586,10 +504,11 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
 };
 
 // -- User Profile --
-const UserProfile = ({ currentUser, posts, users, followingIds, onToggleFollow }: any) => {
+const UserProfile = ({ currentUser, posts, sparks, users, followingIds, onToggleFollow }: any) => {
   const { id } = useParams(); // Should allow optional id
   const navigate = useNavigate();
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'sparks' | 'deals'>('posts');
   
   // If id is present in URL, find that user, otherwise use currentUser
   const isMe = !id || id === currentUser.id;
@@ -597,7 +516,6 @@ const UserProfile = ({ currentUser, posts, users, followingIds, onToggleFollow }
   
   if (!profileUser) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">User not found</div>;
 
-  const userPosts = posts.filter((p: Post) => p.userId === profileUser.id);
   const isFollowing = followingIds ? followingIds.includes(profileUser.id) : false;
 
   const handleFollowClick = () => {
@@ -605,6 +523,24 @@ const UserProfile = ({ currentUser, posts, users, followingIds, onToggleFollow }
       onToggleFollow(profileUser.id);
     }
   };
+
+  // Filter content based on active tab
+  const userPosts = posts.filter((p: Post) => p.userId === profileUser.id);
+  const userSparks = sparks ? sparks.filter((s: Post) => s.userId === profileUser.id) : [];
+  const userDeals = userPosts.filter((p: Post) => p.affiliateLink);
+
+  let displayedContent: Post[] = [];
+  switch (activeTab) {
+    case 'posts':
+      displayedContent = userPosts;
+      break;
+    case 'sparks':
+      displayedContent = userSparks;
+      break;
+    case 'deals':
+      displayedContent = userDeals;
+      break;
+  }
 
   return (
     <div className="pb-20">
@@ -663,27 +599,59 @@ const UserProfile = ({ currentUser, posts, users, followingIds, onToggleFollow }
 
       {/* Posts Tabs */}
       <div className="flex border-t border-gray-100 dark:border-gray-800 mb-0.5">
-          <button className="flex-1 py-3 border-b-2 border-black dark:border-white"><div className="flex justify-center"><ImageIcon className="w-5 h-5 text-black dark:text-white" /></div></button>
-          <button className="flex-1 py-3 border-b-2 border-transparent"><div className="flex justify-center"><Film className="w-5 h-5 text-gray-400" /></div></button>
-          <button className="flex-1 py-3 border-b-2 border-transparent"><div className="flex justify-center"><ShoppingBag className="w-5 h-5 text-gray-400" /></div></button>
+          <button 
+            onClick={() => setActiveTab('posts')}
+            className={`flex-1 py-3 border-b-2 transition-colors duration-200 ${activeTab === 'posts' ? 'border-black dark:border-white' : 'border-transparent'}`}
+          >
+            <div className="flex justify-center">
+              <ImageIcon className={`w-5 h-5 ${activeTab === 'posts' ? 'text-black dark:text-white' : 'text-gray-400'}`} />
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('sparks')}
+            className={`flex-1 py-3 border-b-2 transition-colors duration-200 ${activeTab === 'sparks' ? 'border-black dark:border-white' : 'border-transparent'}`}
+          >
+            <div className="flex justify-center">
+              <Film className={`w-5 h-5 ${activeTab === 'sparks' ? 'text-black dark:text-white' : 'text-gray-400'}`} />
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('deals')}
+            className={`flex-1 py-3 border-b-2 transition-colors duration-200 ${activeTab === 'deals' ? 'border-black dark:border-white' : 'border-transparent'}`}
+          >
+            <div className="flex justify-center">
+              <ShoppingBag className={`w-5 h-5 ${activeTab === 'deals' ? 'text-black dark:text-white' : 'text-gray-400'}`} />
+            </div>
+          </button>
       </div>
 
       {/* Posts Grid */}
       <div className="grid grid-cols-3 gap-0.5">
-         {userPosts.length > 0 ? userPosts.map((post: Post) => (
+         {displayedContent.length > 0 ? displayedContent.map((post: Post) => (
             <div key={post.id} className="relative aspect-square bg-gray-100 dark:bg-gray-900 group overflow-hidden cursor-pointer">
-               <img src={post.url} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />
+               <img src={post.type === 'video' && post.thumbnail ? post.thumbnail : post.url} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />
                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+               
+               {/* Type Indicators */}
                {post.type === 'video' && (
                   <div className="absolute top-2 right-2">
                      <svg className="w-4 h-4 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                   </div>
                )}
+               {activeTab === 'deals' && (
+                 <div className="absolute bottom-2 left-2 right-2">
+                    <div className="bg-brand-600/90 text-white text-[10px] font-bold px-2 py-1 rounded-md text-center shadow-sm truncate backdrop-blur-sm">
+                      {post.affiliateLabel || 'DEAL'}
+                    </div>
+                 </div>
+               )}
             </div>
          )) : (
-             <div className="col-span-3 py-12 flex flex-col items-center justify-center text-gray-400">
-                 <Camera className="w-8 h-8 mb-2 opacity-50" />
-                 <p className="text-sm">No posts yet</p>
+             <div className="col-span-3 py-16 flex flex-col items-center justify-center text-gray-400">
+                 {activeTab === 'posts' && <Camera className="w-12 h-12 mb-3 opacity-20" />}
+                 {activeTab === 'sparks' && <Film className="w-12 h-12 mb-3 opacity-20" />}
+                 {activeTab === 'deals' && <ShoppingBag className="w-12 h-12 mb-3 opacity-20" />}
+                 <p className="text-sm font-medium">No {activeTab} yet</p>
              </div>
          )}
       </div>
@@ -839,7 +807,35 @@ const App = () => {
   const handlePost = (newPost: Post) => setPosts(prev => [newPost, ...prev]);
   const handleLike = (id: string) => setPosts(prev => prev.map(p => p.id === id ? { ...p, likes: p.likedByMe ? p.likes - 1 : p.likes + 1, likedByMe: !p.likedByMe } : p));
   const handleSparkLike = (id: string) => setSparks(prev => prev.map(p => p.id === id ? { ...p, likes: p.likedByMe ? p.likes - 1 : p.likes + 1, likedByMe: !p.likedByMe } : p));
-  const handleSendMsg = (text: string, receiverId: string) => setMessages(prev => [...prev, { id: `m_${Date.now()}`, senderId: currentUser.id, receiverId, text, timestamp: Date.now(), isRead: false }]);
+  
+  // New Message Handler for Chat System
+  const handleSendMessage = (text: string, receiverId: string, media?: { url: string, type: 'image' | 'video' | 'audio' }) => {
+    const newMessage: Message = { 
+      id: `m_${Date.now()}`, 
+      senderId: currentUser.id, 
+      receiverId, 
+      text, 
+      mediaUrl: media?.url,
+      mediaType: media?.type,
+      timestamp: Date.now(), 
+      isRead: false,
+      status: 'sent'
+    };
+    setMessages(prev => [...prev, newMessage]);
+    
+    // Simulate Delivery Status
+    setTimeout(() => {
+        setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, status: 'delivered' } : m));
+    }, 1000);
+    
+    // Simulate Read Status & Reply if it's a user
+    if (!receiverId.startsWith('g_')) {
+        setTimeout(() => {
+            setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, isRead: true, status: 'read' } : m));
+        }, 2500);
+    }
+  };
+
   const handleCreateGroup = (name: string, members: string[]) => { const newGroup = { id: `g_${Date.now()}`, name, avatar: `https://ui-avatars.com/api/?name=${name}`, members: [...members, currentUser.id], adminId: currentUser.id, created_at: Date.now() }; setGroups(prev => [newGroup, ...prev]); };
   
   const handleToggleFollow = (targetUserId: string) => {
@@ -893,11 +889,14 @@ const App = () => {
              <Route path="/search" element={<Explore onOpenMenu={() => setIsMobileMenuOpen(true)} posts={posts} />} />
              <Route path="/shop" element={<Shop onOpenMenu={() => setIsMobileMenuOpen(true)} posts={posts} />} />
              <Route path="/upload" element={<Upload onPost={handlePost} currentUser={currentUser} />} />
-             <Route path="/profile" element={<UserProfile currentUser={currentUser} posts={posts} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
-             <Route path="/profile/:id" element={<UserProfile currentUser={currentUser} posts={posts} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
+             <Route path="/profile" element={<UserProfile currentUser={currentUser} posts={posts} sparks={sparks} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
+             <Route path="/profile/:id" element={<UserProfile currentUser={currentUser} posts={posts} sparks={sparks} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
              <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateProfile} />} />
-             <Route path="/messages" element={<Inbox messages={messages} users={users} groups={groups} currentUser={currentUser} onCreateGroup={handleCreateGroup} />} />
-             <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={users} groups={groups} currentUser={currentUser} onSend={handleSendMsg} />} />
+             
+             {/* New Chat System Routes */}
+             <Route path="/messages" element={<ChatSystem currentUser={currentUser} users={users} messages={messages} groups={groups} onSendMessage={handleSendMessage} />} />
+             <Route path="/messages/:userId" element={<ChatSystem currentUser={currentUser} users={users} messages={messages} groups={groups} onSendMessage={handleSendMessage} />} />
+             
              <Route path="*" element={<Navigate to="/" replace />} />
          </Routes>
       </Layout>
@@ -906,3 +905,4 @@ const App = () => {
 };
 
 export default App;
+    

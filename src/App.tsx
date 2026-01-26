@@ -1,13 +1,15 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe, AlertTriangle, RefreshCcw, Users, UserPlus as UserPlusIcon, Film, Bell, Settings, Bookmark, Shield, HelpCircle, ChevronRight, Menu, Github, Chrome, Save } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Moon, Sun, Briefcase, ShoppingBag, ChevronLeft, Camera, Check, Trash2, ExternalLink, MessageCircle, X, Edit2, Share2, Copy, Facebook, Twitter, Linkedin, Link2, LogOut, LogIn, UserPlus, Send, MessageSquare, Heart, Phone, Video, Mic, MicOff, VideoOff, Paperclip, Image as ImageIcon, Mail, Lock, AtSign, Eye, EyeOff, ArrowRight, KeyRound, MailCheck, Zap, MoreHorizontal, Globe, AlertTriangle, RefreshCcw, Users, UserPlus as UserPlusIcon, Film, Bell, Settings, Bookmark, Shield, HelpCircle, ChevronRight, Menu, Github, Chrome, Save, BarChart3, TrendingUp, ShieldCheck } from 'lucide-react';
 import { CURRENT_USER, INITIAL_POSTS, MOCK_STORIES, MOCK_USERS, INITIAL_MESSAGES, MOCK_GROUPS, MOCK_SPARKS } from './constants';
-import { Post, User as UserType, Story, Comment, Message, Group } from './types';
+import { Post, User as UserType, Story, Comment, Message, Group, GroupMember } from './types';
 import PostCard from './components/PostCard';
 import StoryTray from './components/StoryTray';
 import SparkCard from './components/SparkCard';
+import ChatSystem from './components/ChatSystem';
 import { generateSmartCaption } from './services/geminiService';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
 // -- Icons & UI Components --
 
@@ -35,6 +37,320 @@ const LoadingScreen = () => (
     <h2 className="mt-4 text-lg font-bold text-gray-900 dark:text-white tracking-tight animate-pulse">AffiliSpeed</h2>
   </div>
 );
+
+// -- Landing Page Component --
+const LandingPage = () => {
+  const navigate = useNavigate();
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 500], [0, 200]);
+  const y2 = useTransform(scrollY, [0, 500], [0, -150]);
+
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 40 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white overflow-hidden selection:bg-brand-500 selection:text-white">
+      {/* Navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-tr from-brand-500 to-purple-600 rounded-lg flex items-center justify-center text-white shadow-lg">
+              <Zap className="w-5 h-5 fill-current" />
+            </div>
+            <span className="text-xl font-bold tracking-tight font-sans">AffiliSpeed</span>
+          </div>
+          <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600 dark:text-gray-400">
+            <a href="#features" className="hover:text-brand-600 transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-brand-600 transition-colors">How it Works</a>
+            <a href="#trust" className="hover:text-brand-600 transition-colors">Trust</a>
+          </div>
+          <div className="flex items-center space-x-4">
+            <button onClick={() => navigate('/login')} className="text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-brand-600 transition-colors">Log In</button>
+            <Button onClick={() => navigate('/signup')} className="!w-auto !px-6 !py-2.5">Get Started</Button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-6 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand-500/20 via-gray-50/50 to-white dark:from-brand-900/20 dark:via-black dark:to-black pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto relative z-10 text-center">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            <motion.div variants={fadeInUp} className="inline-flex items-center space-x-2 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-4 py-1.5 rounded-full text-sm font-bold mb-8 border border-brand-100 dark:border-brand-800">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+              </span>
+              <span>The #1 Platform for Affiliate Growth</span>
+            </motion.div>
+            
+            <motion.h1 variants={fadeInUp} className="text-5xl lg:text-7xl font-extrabold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
+              Turn Traffic into Trust. <br className="hidden md:block" />
+              Turn Trust into <span className="text-brand-600 dark:text-brand-500">Income.</span>
+            </motion.h1>
+            
+            <motion.p variants={fadeInUp} className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+              AffiliSpeed gives you the AI tools, real-time analytics, and instant trust you need to monetize your influence. Legitimate, modern, and built for success.
+            </motion.p>
+            
+            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+              <Button onClick={() => navigate('/signup')} className="!w-auto !px-8 !py-4 text-lg shadow-brand-500/40">Start Earning Now</Button>
+              <Button variant="outline" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth'})} className="!w-auto !px-8 !py-4 text-lg">How it Works</Button>
+            </motion.div>
+          </motion.div>
+
+          {/* Abstract Dashboard Visual */}
+          <motion.div 
+            initial={{ opacity: 0, y: 100, rotateX: 20 }}
+            whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, delay: 0.2, type: "spring", stiffness: 50 }}
+            className="mt-20 mx-auto max-w-5xl"
+            style={{ perspective: 1000 }}
+          >
+            <div className="relative rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xl overflow-hidden aspect-[16/9] md:aspect-[21/9] group">
+               <div className="absolute inset-0 bg-gradient-to-br from-brand-50/50 to-purple-50/50 dark:from-brand-900/10 dark:to-purple-900/10 opacity-50" />
+               
+               {/* Mock UI Header */}
+               <div className="absolute top-0 left-0 right-0 h-12 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 flex items-center px-4 space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+               </div>
+
+               {/* Mock UI Content */}
+               <div className="absolute top-16 left-8 right-8 bottom-8 flex space-x-6">
+                  <div className="w-1/4 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 space-y-3 hidden md:block">
+                      <div className="h-2 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
+                      {[1,2,3,4].map(i => <div key={i} className="h-8 w-full bg-white dark:bg-gray-700 rounded-lg shadow-sm" />)}
+                  </div>
+                  <div className="flex-1 space-y-6">
+                      <div className="flex space-x-4">
+                          <div className="flex-1 h-32 bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl shadow-lg p-6 text-white flex flex-col justify-between">
+                              <div className="w-8 h-8 bg-white/20 rounded-lg" />
+                              <div className="h-4 w-24 bg-white/40 rounded" />
+                          </div>
+                          <div className="flex-1 h-32 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700" />
+                          <div className="flex-1 h-32 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700" />
+                      </div>
+                      <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 h-64 relative overflow-hidden">
+                          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-brand-500/10 to-transparent" />
+                          <svg className="w-full h-full text-brand-500 opacity-20" viewBox="0 0 100 100" preserveAspectRatio="none">
+                              <path d="M0 100 C 20 0 50 0 100 100 Z" fill="currentColor" />
+                          </svg>
+                      </div>
+                  </div>
+               </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Trust Ticker */}
+      <div className="bg-gray-50 dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 py-10 overflow-hidden">
+        <p className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Trusted by verified partners</p>
+        <div className="flex space-x-12 animate-scroll opacity-50 grayscale hover:grayscale-0 transition-all duration-500 justify-center flex-wrap px-4 gap-y-8">
+           {/* Mock Logos */}
+           {['Shopify', 'Amazon Associates', 'ClickBank', 'ShareASale', 'Rakuten', 'Impact'].map((brand) => (
+             <span key={brand} className="text-xl font-bold text-gray-500 dark:text-gray-400">{brand}</span>
+           ))}
+        </div>
+      </div>
+
+      {/* How it Works */}
+      <section id="how-it-works" className="py-24 px-6 relative">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6 dark:text-white">Built for real affiliate success.</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">Three simple steps to turn your content into a revenue stream.</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { icon: Camera, title: "1. Create & Upload", desc: "Upload your photos or videos directly. Our platform optimizes them for maximum engagement instantly." },
+              { icon: Zap, title: "2. AI-Powered Links", desc: "Our Gemini AI generates viral captions and embeds secure affiliate links automatically." },
+              { icon: TrendingUp, title: "3. Track & Earn", desc: "Monitor clicks, conversions, and commissions in real-time with our transparent dashboard." }
+            ].map((step, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.2, duration: 0.6 }}
+                className="bg-gray-50 dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 hover:border-brand-500/30 transition-colors group"
+              >
+                <div className="w-14 h-14 bg-white dark:bg-black rounded-2xl flex items-center justify-center shadow-lg shadow-gray-200/50 dark:shadow-none mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <step.icon className="w-7 h-7 text-brand-600" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 dark:text-white">{step.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Deep Dive - Alternating */}
+      <section id="features" className="py-24 px-6 bg-gray-50 dark:bg-gray-900/50">
+        <div className="max-w-7xl mx-auto space-y-24">
+          {/* Feature 1 */}
+          <div className="flex flex-col md:flex-row items-center gap-12">
+            <motion.div 
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="flex-1 space-y-6"
+            >
+              <div className="inline-flex items-center space-x-2 text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/20 px-3 py-1 rounded-full text-sm">
+                <Zap className="w-4 h-4" /> <span>Smarter Links</span>
+              </div>
+              <h2 className="text-4xl font-bold dark:text-white">AI that writes code, <br />captions, and checks.</h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400">Stop wasting time writing copy. Our integrated AI analyzes your image, identifies the product, and generates high-converting captions with compliant affiliate tags instantly.</p>
+              <ul className="space-y-3">
+                {['Automatic Product Recognition', 'SEO Optimized Hashtags', 'One-Click Compliance Disclosures'].map(item => (
+                  <li key={item} className="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
+                    <Check className="w-5 h-5 text-brand-500" /> <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="flex-1 relative"
+            >
+              <div className="absolute inset-0 bg-brand-500/20 blur-3xl rounded-full" />
+              <div className="relative bg-white dark:bg-black rounded-2xl shadow-2xl p-6 border border-gray-100 dark:border-gray-800">
+                 {/* Simulated Chat Interface */}
+                 <div className="space-y-4">
+                    <div className="flex items-end space-x-2">
+                       <div className="w-8 h-8 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                       <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-2xl rounded-bl-none max-w-[80%] text-sm">
+                          Can you generate a caption for this sneaker?
+                       </div>
+                    </div>
+                    <div className="flex items-end space-x-2 justify-end">
+                       <div className="bg-brand-600 text-white p-3 rounded-2xl rounded-br-none max-w-[80%] text-sm shadow-lg">
+                          Running fast never looked this good. 👟 Grab the new AirStride 5.0 at 20% off today! #run #fitness #deal
+                       </div>
+                       <div className="w-8 h-8 bg-brand-500 rounded-full flex items-center justify-center text-white"><Zap className="w-4 h-4" /></div>
+                    </div>
+                 </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="flex flex-col md:flex-row-reverse items-center gap-12">
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="flex-1 space-y-6"
+            >
+              <div className="inline-flex items-center space-x-2 text-blue-600 font-bold bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full text-sm">
+                <BarChart3 className="w-4 h-4" /> <span>Total Transparency</span>
+              </div>
+              <h2 className="text-4xl font-bold dark:text-white">Real earnings.<br />No hidden fees.</h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400">Track every click and conversion. Our dashboard gives you granular insights so you know exactly what's working and how much you're making.</p>
+              <Button variant="outline" className="!w-auto">View Demo Dashboard</Button>
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="flex-1 relative"
+            >
+               <div className="bg-white dark:bg-black rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                  <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                     <span className="font-bold">Earnings Overview</span>
+                     <span className="text-green-500 font-mono text-sm">+24% this week</span>
+                  </div>
+                  <div className="p-8 flex items-end space-x-2 h-64">
+                     {[40, 60, 45, 70, 50, 80, 65].map((h, i) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ height: 0 }}
+                          whileInView={{ height: `${h}%` }}
+                          transition={{ delay: i * 0.1, duration: 0.5 }}
+                          className="flex-1 bg-brand-500 rounded-t-lg opacity-80 hover:opacity-100 transition-opacity"
+                        />
+                     ))}
+                  </div>
+               </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Grid */}
+      <section id="trust" className="py-24 px-6 bg-white dark:bg-black">
+         <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+               <h2 className="text-3xl font-bold mb-4">Your business is safe with us.</h2>
+               <p className="text-gray-500">Enterprise-grade security for solo creators.</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+               {[
+                 { title: "Verified Payments", desc: "Direct deposits to your bank or PayPal. Net-30 guaranteed.", icon: ShieldCheck },
+                 { title: "Data Encryption", desc: "End-to-end encryption for all your messages and financial data.", icon: Lock },
+                 { title: "24/7 Support", desc: "Real humans ready to help you optimize your campaigns.", icon: HelpCircle }
+               ].map((card, i) => (
+                 <div key={i} className="flex flex-col items-center text-center p-6 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                    <div className="p-3 bg-brand-100 dark:bg-brand-900/30 text-brand-600 rounded-full mb-4">
+                       <card.icon className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-bold text-lg mb-2">{card.title}</h4>
+                    <p className="text-gray-500 text-sm">{card.desc}</p>
+                 </div>
+               ))}
+            </div>
+         </div>
+      </section>
+
+      {/* CTA Footer */}
+      <section className="py-20 px-6">
+         <div className="max-w-5xl mx-auto relative rounded-[2.5rem] bg-gray-900 dark:bg-gray-800 overflow-hidden px-6 py-16 text-center shadow-2xl">
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand-900/40 to-transparent pointer-events-none" />
+            <div className="relative z-10">
+               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Ready to scale your influence?</h2>
+               <p className="text-gray-300 text-lg mb-10 max-w-2xl mx-auto">Join thousands of creators who are turning their passion into a paycheck with AffiliSpeed.</p>
+               <Button onClick={() => navigate('/signup')} className="!w-auto !px-10 !py-4 text-lg mx-auto bg-white text-black hover:bg-gray-100 border-none">Get Started Free</Button>
+               <p className="mt-6 text-xs text-gray-500">No credit card required. Cancel anytime.</p>
+            </div>
+         </div>
+      </section>
+
+      <footer className="py-12 border-t border-gray-100 dark:border-gray-800 text-center text-gray-500 text-sm">
+         <div className="flex justify-center space-x-6 mb-6">
+            <Github className="w-5 h-5 hover:text-black dark:hover:text-white transition-colors cursor-pointer" />
+            <Twitter className="w-5 h-5 hover:text-blue-400 transition-colors cursor-pointer" />
+            <Linkedin className="w-5 h-5 hover:text-blue-700 transition-colors cursor-pointer" />
+         </div>
+         <p>&copy; {new Date().getFullYear()} AffiliSpeed Inc. All rights reserved.</p>
+      </footer>
+    </div>
+  );
+};
 
 // -- Mobile Menu Component --
 const MobileMenu = ({ isOpen, onClose, navItems, theme, toggleTheme, onLogout }: any) => {
@@ -305,16 +621,31 @@ const EditProfile = ({ user, onUpdate }: { user: UserType, onUpdate: (u: UserTyp
     const navigate = useNavigate();
     const [name, setName] = useState(user.name);
     const [bio, setBio] = useState(user.bio);
+    const [avatar, setAvatar] = useState(user.avatar);
     const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleSave = () => {
         setIsSaving(true);
         // Simulate API call
         setTimeout(() => {
-            onUpdate({ ...user, name, bio });
+            onUpdate({ ...user, name, bio, avatar });
             setIsSaving(false);
             navigate('/profile');
         }, 500);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (reader.result) {
+                    setAvatar(reader.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     return (
@@ -331,13 +662,28 @@ const EditProfile = ({ user, onUpdate }: { user: UserType, onUpdate: (u: UserTyp
             
             <div className="p-6 space-y-6">
                 <div className="flex flex-col items-center space-y-3">
-                    <div className="relative group cursor-pointer">
-                        <img src={user.avatar} className="w-24 h-24 rounded-full object-cover border-4 border-gray-100 dark:border-gray-800" />
+                    <div 
+                        className="relative group cursor-pointer" 
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        <img src={avatar} className="w-24 h-24 rounded-full object-cover border-4 border-gray-100 dark:border-gray-800" />
                         <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <Camera className="w-8 h-8 text-white" />
                         </div>
                     </div>
-                    <span className="text-brand-600 font-semibold text-sm">Change Profile Photo</span>
+                    <button 
+                        onClick={() => fileInputRef.current?.click()} 
+                        className="text-brand-600 font-semibold text-sm hover:text-brand-700 transition-colors"
+                    >
+                        Change Profile Photo
+                    </button>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={handleFileChange}
+                    />
                 </div>
 
                 <div className="space-y-4">
@@ -362,118 +708,6 @@ const EditProfile = ({ user, onUpdate }: { user: UserType, onUpdate: (u: UserTyp
                 </div>
             </div>
         </div>
-    );
-};
-
-
-// Inbox with Improved Filtering
-const Inbox = ({ messages, users, currentUser, groups, onCreateGroup }: any) => {
-    const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showNewChat, setShowNewChat] = useState(false);
-    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-    const [newGroupName, setNewGroupName] = useState('');
-    const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  
-    const userConversations = users.map((user: any) => {
-      const userMessages = messages.filter((m: any) => 
-        (m.senderId === user.id && m.receiverId === currentUser.id) || 
-        (m.senderId === currentUser.id && m.receiverId === user.id)
-      );
-      userMessages.sort((a: any, b: any) => b.timestamp - a.timestamp);
-      return { id: user.id, user, lastMessage: userMessages[0], unreadCount: userMessages.filter((m: any) => m.receiverId === currentUser.id && !m.isRead).length, type: 'direct' };
-    }).filter((c: any) => c.lastMessage);
-
-    const groupConversations = groups.map((group: any) => {
-        if (!group.members.includes(currentUser.id)) return null;
-        const groupMessages = messages.filter((m: any) => m.receiverId === group.id);
-        groupMessages.sort((a: any, b: any) => b.timestamp - a.timestamp);
-        return { id: group.id, group, lastMessage: groupMessages[0] || { timestamp: group.created_at, text: 'Group created' }, unreadCount: groupMessages.filter((m: any) => m.timestamp > (Date.now() - 86400000) && !m.isRead).length, type: 'group' };
-    }).filter(Boolean);
-
-    const allConversations = [...userConversations, ...groupConversations].sort((a: any, b: any) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
-    const filteredConversations = allConversations.filter((c: any) => c.type === 'direct' ? (c.user.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.user.handle.toLowerCase().includes(searchTerm.toLowerCase())) : c.group.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const handleCreateGroupSubmit = () => { if (!newGroupName.trim() || selectedMembers.length === 0) return; onCreateGroup(newGroupName, selectedMembers); setIsCreatingGroup(false); setNewGroupName(''); setSelectedMembers([]); setShowNewChat(false); };
-    const toggleMemberSelection = (userId: string) => { if (selectedMembers.includes(userId)) setSelectedMembers(prev => prev.filter(id => id !== userId)); else setSelectedMembers(prev => [...prev, userId]); };
-  
-    return (
-      <div className="max-w-xl mx-auto bg-white dark:bg-black min-h-screen pb-20">
-        <div className="flex items-center justify-between px-4 py-3 sticky top-0 bg-white dark:bg-black z-10 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}><ChevronLeft className="w-7 h-7 text-gray-900 dark:text-white -ml-2 mr-1" /><h1 className="font-bold text-xl dark:text-white">{currentUser.handle}</h1></div>
-          <button onClick={() => setShowNewChat(true)} className="text-gray-900 dark:text-white"><Edit2 className="w-6 h-6" /></button>
-        </div>
-        <div className="px-4 mb-4 mt-2"><div className="bg-gray-100 dark:bg-gray-900 rounded-xl flex items-center px-3 py-2"><Search className="w-4 h-4 text-gray-500" /><input type="text" placeholder="Search" className="bg-transparent border-none outline-none text-sm ml-2 w-full text-gray-900 dark:text-white placeholder-gray-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div></div>
-        <div className="flex flex-col"><h2 className="px-4 text-sm font-semibold text-gray-900 dark:text-white mb-2">Messages</h2>
-          {filteredConversations.length === 0 ? <div className="p-10 text-center text-gray-500"><MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" /><p>No messages yet.</p></div> : 
-            filteredConversations.map((convo: any) => (
-              <Link to={`/messages/${convo.id}`} key={convo.id} className="flex items-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
-                  <div className="relative mr-3"><img src={convo.type === 'direct' ? convo.user.avatar : convo.group.avatar} className="w-14 h-14 rounded-full object-cover" />{convo.type === 'group' && <div className="absolute -bottom-1 -right-1 bg-white dark:bg-black rounded-full p-0.5"><div className="bg-brand-500 rounded-full p-1"><Users className="w-3 h-3 text-white"/></div></div>}</div>
-                  <div className="flex-1 min-w-0"><div className="flex justify-between items-center mb-0.5"><h3 className={`text-sm truncate pr-2 ${convo.unreadCount > 0 ? 'font-bold' : 'font-normal'} dark:text-white`}>{convo.type === 'direct' ? convo.user.name : convo.group.name}</h3></div><div className="flex items-center text-sm text-gray-500 dark:text-gray-400"><p className={`truncate max-w-[180px] ${convo.unreadCount > 0 ? 'font-bold text-gray-900 dark:text-white' : ''}`}>{convo.lastMessage?.senderId === currentUser.id ? 'You: ' : ''}{convo.lastMessage?.mediaUrl ? 'Sent a photo' : convo.lastMessage?.text}</p><span className="mx-1">·</span><span className="flex-shrink-0 text-xs">{new Date(convo.lastMessage?.timestamp || 0).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div></div>
-                  {convo.unreadCount > 0 && <div className="ml-2 bg-blue-500 w-2.5 h-2.5 rounded-full"></div>}
-              </Link>
-            ))
-          }
-        </div>
-        <AnimatePresence>
-          {showNewChat && (
-            <motion.div initial={{ opacity: 0, y: "100%" }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: "100%" }} className="fixed inset-0 z-50 bg-white dark:bg-black flex flex-col">
-               <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800"><button onClick={() => { setShowNewChat(false); setIsCreatingGroup(false); }} className="text-gray-900 dark:text-white"><X className="w-6 h-6" /></button><h2 className="font-bold text-lg dark:text-white">{isCreatingGroup ? "New Group" : "New Message"}</h2>{isCreatingGroup ? <button onClick={handleCreateGroupSubmit} disabled={!newGroupName.trim() || selectedMembers.length === 0} className="text-brand-600 font-bold disabled:opacity-50">Create</button> : <div className="w-6" />}</div>
-               <div className="p-4 overflow-y-auto">
-                  {!isCreatingGroup ? <><button onClick={() => setIsCreatingGroup(true)} className="flex items-center space-x-3 p-3 w-full hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl mb-2 text-brand-600"><div className="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center"><Users className="w-6 h-6" /></div><span className="font-bold">Create a New Group</span></button><h3 className="text-sm font-semibold text-gray-500 mb-2">Suggested</h3>{users.filter((u: any) => u.id !== currentUser.id).map((user: any) => (<div key={user.id} onClick={() => { navigate(`/messages/${user.id}`); setShowNewChat(false); }} className="flex items-center space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl cursor-pointer"><img src={user.avatar} className="w-12 h-12 rounded-full object-cover" /><div><p className="font-bold text-gray-900 dark:text-white">{user.name}</p><p className="text-sm text-gray-500">@{user.handle}</p></div></div>))}</> : <div className="space-y-4"><div className="space-y-2"><label className="text-sm font-medium dark:text-gray-300">Group Name</label><input type="text" className="w-full p-3 rounded-xl bg-gray-100 dark:bg-gray-900 border-none outline-none dark:text-white" placeholder="e.g. Besties" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} /></div><div><h3 className="text-sm font-semibold text-gray-500 mb-2">Add Members</h3>{users.filter((u: any) => u.id !== currentUser.id).map((user: any) => { const isSelected = selectedMembers.includes(user.id); return (<div key={user.id} onClick={() => toggleMemberSelection(user.id)} className={`flex items-center space-x-3 p-3 rounded-xl cursor-pointer border ${isSelected ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900'}`}><div className="relative"><img src={user.avatar} className="w-10 h-10 rounded-full object-cover" />{isSelected && <div className="absolute -bottom-1 -right-1 bg-brand-500 text-white rounded-full p-0.5"><Check className="w-3 h-3" /></div>}</div><div className="flex-1"><p className="font-bold text-gray-900 dark:text-white text-sm">{user.name}</p><p className="text-xs text-gray-500">@{user.handle}</p></div></div>); })}</div></div>}
-               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-};
-
-const ChatRoom = ({ messages, users, groups, currentUser, onSend, onEdit, onToggleLike }: any) => {
-    const { userId } = useParams();
-    const navigate = useNavigate();
-    const [text, setText] = useState('');
-    const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const partner = users.find((u: any) => u.id === userId);
-    const activeGroup = groups.find((g: any) => g.id === userId);
-    
-    const chatMessages = messages.filter((m: any) => {
-        if (activeGroup) return m.receiverId === activeGroup.id;
-        else if (partner) return (m.senderId === currentUser.id && m.receiverId === partner.id) || (m.senderId === partner.id && m.receiverId === currentUser.id);
-        return false;
-    }).sort((a: any, b: any) => a.timestamp - b.timestamp);
-  
-    useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [chatMessages.length]);
-    const handleSend = () => { if (text.trim() && userId) { onSend(text, userId); setText(''); } };
-    if (!partner && !activeGroup) return <div>Chat not found</div>;
-    const chatTitle = activeGroup ? activeGroup.name : partner?.name;
-    const chatAvatar = activeGroup ? activeGroup.avatar : partner?.avatar;
-  
-    return (
-      <div className="max-w-xl mx-auto bg-white dark:bg-black h-screen flex flex-col relative">
-         <div className="flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-black z-10">
-            <button onClick={() => navigate('/messages')} className="mr-4 text-gray-900 dark:text-white"><ChevronLeft className="w-7 h-7" /></button>
-            <div className="flex items-center space-x-3 flex-1">
-               <img src={chatAvatar} className="w-8 h-8 rounded-full object-cover" />
-               <div className="flex flex-col"><h2 className="font-bold text-sm dark:text-white leading-none mb-0.5">{chatTitle}</h2><p className="text-[10px] text-gray-500">Active now</p></div>
-            </div>
-         </div>
-         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white dark:bg-black" ref={scrollRef}>
-            {chatMessages.map((msg: any) => {
-              const isMe = msg.senderId === currentUser.id;
-              return (<div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-1`}>
-                   <div className={`relative text-[15px] leading-snug rounded-2xl px-4 py-2 ${isMe ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white'}`}>{msg.text}</div>
-              </div>);
-            })}
-         </div>
-         <div className="p-3 bg-white dark:bg-black border-t border-gray-100 dark:border-gray-800 sticky bottom-0 z-20 pb-safe-area">
-             <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-900 rounded-full px-4 py-2">
-                 <input type="text" className="flex-1 bg-transparent border-none outline-none text-sm py-2 dark:text-white" placeholder="Message..." value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} />
-                 {text.trim() && <button onClick={handleSend} className="text-brand-600 font-semibold text-sm">Send</button>}
-             </div>
-         </div>
-      </div>
     );
 };
 
@@ -536,10 +770,10 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
     if (!preview || !file) return;
     setLoading(true);
     try {
-      let secureUrl = preview; // Default to local preview if upload fails/skipped
+      let secureUrl = preview; 
       
-      // Attempt Cloudinary upload, but fallback gracefully if it fails (simulating "no backend" requirement partially)
       try {
+          // Cloudinary fallback
           const formData = new FormData(); formData.append('file', file); formData.append('upload_preset', 'oxh9k9eo'); formData.append('cloud_name', 'dgdvvnnnj');
           const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/dgdvvnnnj/auto/upload', { method: 'POST', body: formData });
           if (cloudinaryRes.ok) {
@@ -552,7 +786,6 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
 
       const mediaType = file.type.startsWith('video') ? 'video' : 'image';
       
-      // Mock Post Creation (No Supabase)
       const newPostData: Post = { 
           id: `p_${Date.now()}`, 
           userId: currentUser.id, 
@@ -568,7 +801,6 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
           likedByMe: false 
       };
       
-      // Simulate network delay
       setTimeout(() => {
           onPost(newPostData); 
           navigate('/');
@@ -586,10 +818,11 @@ const Upload = ({ onPost, currentUser }: { onPost: (post: Post) => void, current
 };
 
 // -- User Profile --
-const UserProfile = ({ currentUser, posts, users, followingIds, onToggleFollow }: any) => {
+const UserProfile = ({ currentUser, posts, sparks, users, followingIds, onToggleFollow }: any) => {
   const { id } = useParams(); // Should allow optional id
   const navigate = useNavigate();
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'sparks' | 'deals'>('posts');
   
   // If id is present in URL, find that user, otherwise use currentUser
   const isMe = !id || id === currentUser.id;
@@ -597,7 +830,6 @@ const UserProfile = ({ currentUser, posts, users, followingIds, onToggleFollow }
   
   if (!profileUser) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">User not found</div>;
 
-  const userPosts = posts.filter((p: Post) => p.userId === profileUser.id);
   const isFollowing = followingIds ? followingIds.includes(profileUser.id) : false;
 
   const handleFollowClick = () => {
@@ -605,6 +837,24 @@ const UserProfile = ({ currentUser, posts, users, followingIds, onToggleFollow }
       onToggleFollow(profileUser.id);
     }
   };
+
+  // Filter content based on active tab
+  const userPosts = posts.filter((p: Post) => p.userId === profileUser.id);
+  const userSparks = sparks ? sparks.filter((s: Post) => s.userId === profileUser.id) : [];
+  const userDeals = userPosts.filter((p: Post) => p.affiliateLink);
+
+  let displayedContent: Post[] = [];
+  switch (activeTab) {
+    case 'posts':
+      displayedContent = userPosts;
+      break;
+    case 'sparks':
+      displayedContent = userSparks;
+      break;
+    case 'deals':
+      displayedContent = userDeals;
+      break;
+  }
 
   return (
     <div className="pb-20">
@@ -663,27 +913,59 @@ const UserProfile = ({ currentUser, posts, users, followingIds, onToggleFollow }
 
       {/* Posts Tabs */}
       <div className="flex border-t border-gray-100 dark:border-gray-800 mb-0.5">
-          <button className="flex-1 py-3 border-b-2 border-black dark:border-white"><div className="flex justify-center"><ImageIcon className="w-5 h-5 text-black dark:text-white" /></div></button>
-          <button className="flex-1 py-3 border-b-2 border-transparent"><div className="flex justify-center"><Film className="w-5 h-5 text-gray-400" /></div></button>
-          <button className="flex-1 py-3 border-b-2 border-transparent"><div className="flex justify-center"><ShoppingBag className="w-5 h-5 text-gray-400" /></div></button>
+          <button 
+            onClick={() => setActiveTab('posts')}
+            className={`flex-1 py-3 border-b-2 transition-colors duration-200 ${activeTab === 'posts' ? 'border-black dark:border-white' : 'border-transparent'}`}
+          >
+            <div className="flex justify-center">
+              <ImageIcon className={`w-5 h-5 ${activeTab === 'posts' ? 'text-black dark:text-white' : 'text-gray-400'}`} />
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('sparks')}
+            className={`flex-1 py-3 border-b-2 transition-colors duration-200 ${activeTab === 'sparks' ? 'border-black dark:border-white' : 'border-transparent'}`}
+          >
+            <div className="flex justify-center">
+              <Film className={`w-5 h-5 ${activeTab === 'sparks' ? 'text-black dark:text-white' : 'text-gray-400'}`} />
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('deals')}
+            className={`flex-1 py-3 border-b-2 transition-colors duration-200 ${activeTab === 'deals' ? 'border-black dark:border-white' : 'border-transparent'}`}
+          >
+            <div className="flex justify-center">
+              <ShoppingBag className={`w-5 h-5 ${activeTab === 'deals' ? 'text-black dark:text-white' : 'text-gray-400'}`} />
+            </div>
+          </button>
       </div>
 
       {/* Posts Grid */}
       <div className="grid grid-cols-3 gap-0.5">
-         {userPosts.length > 0 ? userPosts.map((post: Post) => (
+         {displayedContent.length > 0 ? displayedContent.map((post: Post) => (
             <div key={post.id} className="relative aspect-square bg-gray-100 dark:bg-gray-900 group overflow-hidden cursor-pointer">
-               <img src={post.url} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />
+               <img src={post.type === 'video' && post.thumbnail ? post.thumbnail : post.url} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />
                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+               
+               {/* Type Indicators */}
                {post.type === 'video' && (
                   <div className="absolute top-2 right-2">
                      <svg className="w-4 h-4 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                   </div>
                )}
+               {activeTab === 'deals' && (
+                 <div className="absolute bottom-2 left-2 right-2">
+                    <div className="bg-brand-600/90 text-white text-[10px] font-bold px-2 py-1 rounded-md text-center shadow-sm truncate backdrop-blur-sm">
+                      {post.affiliateLabel || 'DEAL'}
+                    </div>
+                 </div>
+               )}
             </div>
          )) : (
-             <div className="col-span-3 py-12 flex flex-col items-center justify-center text-gray-400">
-                 <Camera className="w-8 h-8 mb-2 opacity-50" />
-                 <p className="text-sm">No posts yet</p>
+             <div className="col-span-3 py-16 flex flex-col items-center justify-center text-gray-400">
+                 {activeTab === 'posts' && <Camera className="w-12 h-12 mb-3 opacity-20" />}
+                 {activeTab === 'sparks' && <Film className="w-12 h-12 mb-3 opacity-20" />}
+                 {activeTab === 'deals' && <ShoppingBag className="w-12 h-12 mb-3 opacity-20" />}
+                 <p className="text-sm font-medium">No {activeTab} yet</p>
              </div>
          )}
       </div>
@@ -701,13 +983,17 @@ const Layout = ({ children, theme, toggleTheme, isAuthenticated, onLogout, isAut
 
   if (isAuthChecking) return <LoadingScreen />;
 
-  const publicRoutes = ['/login', '/signup', '/forgot-password'];
+  // NOTE: Changed logic here to allow "/" to be public (Landing Page) if not authenticated
+  const publicRoutes = ['/login', '/signup', '/forgot-password', '/']; 
+  
   if (publicRoutes.includes(location.pathname)) {
+    // If on root and authenticated, redirect to feed (handled in App main component via Route render, but good to check here too if structure changes)
+    // However, since Layout wraps everything, we just render children for public routes.
     return <div className={theme}>{children}</div>;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />; // Redirect to Landing Page (root) instead of login
   }
 
   const navItems = [
@@ -839,7 +1125,35 @@ const App = () => {
   const handlePost = (newPost: Post) => setPosts(prev => [newPost, ...prev]);
   const handleLike = (id: string) => setPosts(prev => prev.map(p => p.id === id ? { ...p, likes: p.likedByMe ? p.likes - 1 : p.likes + 1, likedByMe: !p.likedByMe } : p));
   const handleSparkLike = (id: string) => setSparks(prev => prev.map(p => p.id === id ? { ...p, likes: p.likedByMe ? p.likes - 1 : p.likes + 1, likedByMe: !p.likedByMe } : p));
-  const handleSendMsg = (text: string, receiverId: string) => setMessages(prev => [...prev, { id: `m_${Date.now()}`, senderId: currentUser.id, receiverId, text, timestamp: Date.now(), isRead: false }]);
+  
+  // New Message Handler for Chat System
+  const handleSendMessage = (text: string, receiverId: string, media?: { url: string, type: 'image' | 'video' | 'audio' }) => {
+    const newMessage: Message = { 
+      id: `m_${Date.now()}`, 
+      senderId: currentUser.id, 
+      receiverId, 
+      text, 
+      mediaUrl: media?.url,
+      mediaType: media?.type,
+      timestamp: Date.now(), 
+      isRead: false,
+      status: 'sent'
+    };
+    setMessages(prev => [...prev, newMessage]);
+    
+    // Simulate Delivery Status
+    setTimeout(() => {
+        setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, status: 'delivered' } : m));
+    }, 1000);
+    
+    // Simulate Read Status & Reply if it's a user
+    if (!receiverId.startsWith('g_')) {
+        setTimeout(() => {
+            setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, isRead: true, status: 'read' } : m));
+        }, 2500);
+    }
+  };
+
   const handleCreateGroup = (name: string, members: string[]) => { const newGroup = { id: `g_${Date.now()}`, name, avatar: `https://ui-avatars.com/api/?name=${name}`, members: [...members, currentUser.id], adminId: currentUser.id, created_at: Date.now() }; setGroups(prev => [newGroup, ...prev]); };
   
   const handleToggleFollow = (targetUserId: string) => {
@@ -888,16 +1202,28 @@ const App = () => {
              <Route path="/login" element={<LoginScreen onLogin={() => setIsAuthenticated(true)} />} />
              <Route path="/signup" element={<SignupScreen onSignup={() => setIsAuthenticated(true)} />} />
              <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-             <Route path="/" element={<Feed posts={posts} stories={stories} onLike={handleLike} onDelete={id => setPostToDelete(id)} onEdit={() => {}} onComment={handleComment} onShare={handleShare} onAddStory={() => {}} onDeleteStory={() => {}} onEditStory={() => {}} onReplyToStory={() => {}} currentUser={currentUser} unreadCount={unreadCount} onOpenMenu={() => setIsMobileMenuOpen(true)} />} />
+             
+             {/* Modified Root Route: Shows Feed if auth, Landing if not */}
+             <Route path="/" element={
+                isAuthenticated ? (
+                    <Feed posts={posts} stories={stories} onLike={handleLike} onDelete={id => setPostToDelete(id)} onEdit={() => {}} onComment={handleComment} onShare={handleShare} onAddStory={() => {}} onDeleteStory={() => {}} onEditStory={() => {}} onReplyToStory={() => {}} currentUser={currentUser} unreadCount={unreadCount} onOpenMenu={() => setIsMobileMenuOpen(true)} />
+                ) : (
+                    <LandingPage />
+                )
+             } />
+             
              <Route path="/sparks" element={<Sparks sparks={sparks} onLike={handleSparkLike} onOpenMenu={() => setIsMobileMenuOpen(true)} />} />
              <Route path="/search" element={<Explore onOpenMenu={() => setIsMobileMenuOpen(true)} posts={posts} />} />
              <Route path="/shop" element={<Shop onOpenMenu={() => setIsMobileMenuOpen(true)} posts={posts} />} />
              <Route path="/upload" element={<Upload onPost={handlePost} currentUser={currentUser} />} />
-             <Route path="/profile" element={<UserProfile currentUser={currentUser} posts={posts} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
-             <Route path="/profile/:id" element={<UserProfile currentUser={currentUser} posts={posts} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
+             <Route path="/profile" element={<UserProfile currentUser={currentUser} posts={posts} sparks={sparks} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
+             <Route path="/profile/:id" element={<UserProfile currentUser={currentUser} posts={posts} sparks={sparks} users={users} followingIds={followingIds} onToggleFollow={handleToggleFollow} />} />
              <Route path="/edit-profile" element={<EditProfile user={currentUser} onUpdate={handleUpdateProfile} />} />
-             <Route path="/messages" element={<Inbox messages={messages} users={users} groups={groups} currentUser={currentUser} onCreateGroup={handleCreateGroup} />} />
-             <Route path="/messages/:userId" element={<ChatRoom messages={messages} users={users} groups={groups} currentUser={currentUser} onSend={handleSendMsg} />} />
+             
+             {/* New Chat System Routes */}
+             <Route path="/messages" element={<ChatSystem currentUser={currentUser} users={users} messages={messages} groups={groups} onSendMessage={handleSendMessage} />} />
+             <Route path="/messages/:userId" element={<ChatSystem currentUser={currentUser} users={users} messages={messages} groups={groups} onSendMessage={handleSendMessage} />} />
+             
              <Route path="*" element={<Navigate to="/" replace />} />
          </Routes>
       </Layout>
