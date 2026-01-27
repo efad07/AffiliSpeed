@@ -3,13 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Send, Mic, Phone, Video, MoreVertical, ArrowLeft, Search, 
-  Check, CheckCheck, X, PhoneOff, Camera, Trash2, Smile, 
-  Paperclip, MoreHorizontal, Play, Pause, User as UserIcon, 
+  Check, CheckCheck, X, PhoneOff, Camera, Trash2, 
+  Paperclip, Play, Pause, User as UserIcon, 
   LogOut, Shield, Users, Ban, Edit2, UserPlus, UserMinus, 
-  CornerDownLeft, Crown
+  Crown, AlertCircle, MoreHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Message, CallSession, Group, GroupMember } from '../types';
+import { User, Message, CallSession, Group } from '../types';
 
 // --- Interfaces ---
 
@@ -472,33 +472,52 @@ const ChatContent = ({ messages, currentUser, chatId, group, users, onDelete }: 
                                 {showAvatar && <img src={senderUser?.avatar} className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 object-cover" />}
                             </div>
                         )}
-                        <div 
-                            className={`max-w-[70%] relative`}
-                            onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, isSender: isMe }); }}
-                        >
+                        <div className={`max-w-[70%] relative flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                            {/* Sender Name if Group */}
                             {group && !isMe && showAvatar && (
                                 <div className="flex items-center space-x-1 ml-1 mb-1">
                                     <span className="text-[10px] font-bold text-gray-500">{senderName}</span>
                                     {senderMember?.role === 'admin' && <Shield className="w-3 h-3 text-green-500 fill-current" />}
                                 </div>
                             )}
-                            <div className={`px-4 py-2 rounded-2xl text-[15px] shadow-sm relative ${isMe ? 'bg-brand-600 text-white rounded-tr-sm' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-sm'}`}>
-                                {msg.deletedForEveryone ? (
-                                    <span className="italic opacity-60 text-sm flex items-center gap-1"><Ban className="w-3 h-3" /> Message deleted</span>
-                                ) : (
-                                    <>
-                                        {msg.mediaUrl && (
-                                            <div className="mb-2 -mx-2 -mt-2 rounded-t-xl overflow-hidden">
-                                                {msg.mediaType === 'image' ? <img src={msg.mediaUrl} className="w-full h-auto max-h-60 object-cover" /> : <div className="p-2"><AudioPlayer src={msg.mediaUrl} /></div>}
-                                            </div>
-                                        )}
-                                        {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
-                                    </>
-                                )}
-                                <div className={`text-[10px] text-right mt-1 flex justify-end items-center gap-1 ${isMe ? 'text-brand-100' : 'text-gray-400'}`}>
-                                    {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                                    {isMe && !msg.deletedForEveryone && <MessageStatusIcon isRead={msg.isRead} status={msg.status} />}
+
+                            <div className={`flex items-center ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                                {/* Message Bubble */}
+                                <div 
+                                    className={`px-4 py-2 rounded-2xl text-[15px] shadow-sm relative ${isMe ? 'bg-brand-600 text-white rounded-tr-sm' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-sm'}`}
+                                    onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, isSender: isMe }); }}
+                                >
+                                    {msg.deletedForEveryone ? (
+                                        <span className="italic opacity-60 text-sm flex items-center gap-1"><Ban className="w-3 h-3" /> Message deleted</span>
+                                    ) : (
+                                        <>
+                                            {msg.mediaUrl && (
+                                                <div className="mb-2 -mx-2 -mt-2 rounded-t-xl overflow-hidden">
+                                                    {msg.mediaType === 'image' ? <img src={msg.mediaUrl} className="w-full h-auto max-h-60 object-cover" /> : <div className="p-2"><AudioPlayer src={msg.mediaUrl} /></div>}
+                                                </div>
+                                            )}
+                                            {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                                        </>
+                                    )}
+                                    <div className={`text-[10px] text-right mt-1 flex justify-end items-center gap-1 ${isMe ? 'text-brand-100' : 'text-gray-400'}`}>
+                                        {new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                        {isMe && !msg.deletedForEveryone && <MessageStatusIcon isRead={msg.isRead} status={msg.status} />}
+                                    </div>
                                 </div>
+
+                                {/* 3 Dot Menu Button */}
+                                {!msg.deletedForEveryone && (
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            setContextMenu({ x: isMe ? rect.right - 150 : rect.left, y: rect.bottom + 5, msgId: msg.id, isSender: isMe });
+                                        }}
+                                        className={`opacity-0 group-hover/msg:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 mx-1 text-gray-400`}
+                                    >
+                                        <MoreHorizontal className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
